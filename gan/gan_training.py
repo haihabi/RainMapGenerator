@@ -144,7 +144,7 @@ class GANTraining(BaseTrainer):
         loss_gen = self.loss.loss_generator(d_real, d_fake)
 
         loss_dict = {'loss': loss_gen.item()}
-        if self.i_critic % self.n_critic == 0:
+        if self.i_critic % self.gan_config.n_critic == 0:
             loss = loss_gen
 
             loss_dict.update({'total_loss': loss.item()})
