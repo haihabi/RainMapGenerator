@@ -55,5 +55,8 @@ if __name__ == '__main__':
 
     for i in range(epoch):
         for data in tqdm(train_loader):
+            data = data.to(working_device)
+            data = data.float()
+            print(data.dtype)
             for step in gan_trainer.get_steps():
-                gan_trainer.train_step(step, data=data.to(working_device).float())
+                gan_trainer.train_step(step, data=data)
