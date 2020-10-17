@@ -1,6 +1,6 @@
 from google.colab import drive
 
-drive.mount('/content/gdrive/My Drive/Runners')
+drive.mount('/content/gdrive/')
 import os
 
 PROJECT = 'RainMapGenerator'
