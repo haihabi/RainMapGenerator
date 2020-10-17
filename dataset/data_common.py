@@ -70,6 +70,11 @@ def sample_slice(data_image: np.ndarray, r: np.ndarray, c: np.ndarray, h: int, w
     return di
 
 
+def slice(data_image: np.ndarray, r: int, c: int, h: int, w: int):
+    di = data_image[r:(r + h), c:(c + w)]
+    return di
+
+
 def radar2rain(radar_tensor):
     gain = 0.4
     offset = -30
