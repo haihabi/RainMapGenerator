@@ -4,17 +4,21 @@ import pickle
 
 
 class RadarDataSet(Dataset):
-    def __init__(self, pickle_path: str):
+    def __init__(self, pickle_path: str, transform=None):
         self.pickle_path = pickle_path
         self.pickle_data = pickle.load(open(pickle_path, 'rb'))
         self.data_preprocess = dict()
         self.n_samples = len(self.pickle_data)
+        self.transform = transform
 
     def __len__(self):
         return self.n_samples
 
     def __getitem__(self, index):
-        return self.get_sample(index)
+        data = self.get_sample(index)
+        if self.transform is not None:
+            data = self.transform(data)
+        return data
 
     def get_sample(self, index):
         data_image = self.data_preprocess.get(index)
