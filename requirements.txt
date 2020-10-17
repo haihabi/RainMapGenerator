@@ -1,3 +1,4 @@
+wandb
 torchvision
 tqdm
 numpy

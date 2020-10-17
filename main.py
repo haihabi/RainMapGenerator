@@ -1,7 +1,7 @@
 import torch
 from torchvision.transforms import RandomHorizontalFlip, \
     RandomVerticalFlip
-
+from importlib import util
 from torchvision import transforms
 from torch import optim
 from tqdm import tqdm
@@ -10,6 +10,14 @@ import gan
 from networks.factory import get_network
 from dataset.radar_static import RadarDataSet
 from dataset.preprocess import MaxNormalization
+from metric import ResultsAveraging
+
+wandb_flag = util.find_spec("wandb")
+found_wandb = wandb_flag is not None
+if found_wandb:
+    print("Found ")
+    import wandb
+
 from google.colab import drive
 
 drive.mount('/content/gdrive/')
@@ -27,8 +35,11 @@ betas = (0.5, 0.999)
 wd = 1e-4
 epoch = 10
 if __name__ == '__main__':
+    args = {}
     print(f"Starting Run of {PROJECT}")
-
+    if found_wandb:
+        wandb.init(project=PROJECT)
+        wandb.config.update(args)  # adds all of the arguments as config variables
     torch.manual_seed(seed)
     working_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Current Working Device is set to:" + str(working_device))
@@ -53,10 +64,14 @@ if __name__ == '__main__':
                             input_working_device=working_device)
     gan_trainer = gan.GANTraining(gan_cfg, net_d, net_g, optimizer_d, optimizer_g)
 
+    ra = ResultsAveraging()
     for i in range(epoch):
         for data in tqdm(train_loader):
             data = data.to(working_device)
             data = data.float()
-            print(data.dtype)
+            batch_results_dict = {}
             for step in gan_trainer.get_steps():
-                gan_trainer.train_step(step, data=data)
+                loss_dict = gan_trainer.train_step(step, data=data)
+                batch_results_dict.update({step + k: v for k, v in loss_dict.items()})
+            ra.update_results(batch_results_dict)
+        wandb.log(ra.results())
