@@ -140,7 +140,7 @@ class GANTraining(BaseTrainer):
         gen_data, z = self.run_generator(real_data, condition)
         d_fake = self.run_discriminator(gen_data, condition)
 
-        d_real = self.run_discriminator(real_data, condition) if self.loss.dual_discriminator else None
+        d_real = self.run_discriminator(real_data, condition) if self.loss.dual_generator else None
         loss_gen = self.loss.loss_generator(d_real, d_fake)
 
         loss_dict = {'loss': loss_gen.item()}
