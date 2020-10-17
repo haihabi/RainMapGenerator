@@ -7,6 +7,7 @@ class RadarDataSet(Dataset):
     def __init__(self, pickle_path: str, transform=None):
         self.pickle_path = pickle_path
         self.pickle_data = pickle.load(open(pickle_path, 'rb'))
+        self.data_shape = self.pickle_path[0].shape
         self.data_preprocess = dict()
         self.n_samples = len(self.pickle_data)
         self.transform = transform

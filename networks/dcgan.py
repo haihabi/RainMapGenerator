@@ -3,16 +3,18 @@ from torch import nn
 
 
 class Generator(nn.Module):
-    def __init__(self, dim, conditional, z_size=128, condition_size=2):
+    def __init__(self, dim, h, w, out_features=16, z_size=128):
         super(Generator, self).__init__()
-        self.conditional = conditional
         self.z_size = z_size
-        self.out_features = 16
-        if conditional:
-            self.z_size += condition_size
+        self.h_in = int(h / 8)
+        self.w_in = int(w / 8)
+        self.h = h
+        self.w = w
+
+        self.out_features = out_features
         norm_class = nn.Identity
         preprocess = nn.Sequential(
-            nn.Linear(self.z_size, 4 * 4 * 4 * dim),
+            nn.Linear(self.z_size, 4 * self.h_in * self.w_in * dim),
             nn.ReLU(True),
         )
         block1 = nn.Sequential(
@@ -36,31 +38,25 @@ class Generator(nn.Module):
         self.eps = 1e-6
         self.output_nl = nn.Sigmoid()
 
-    def forward(self, input, cond=None):
-        if self.conditional:
-            mu = cond[:, 1]
-            spot_max = torch.sqrt(mu - torch.pow(mu, 2.0)) / (mu + self.eps)
-            spot = cond[:, 0]
-            spot = torch.min(spot, spot_max)
-            cond = torch.stack([spot, mu], dim=1)
-            input = torch.cat([input, cond], dim=1)
-        output = self.preprocess(input)
-        output = output.view(-1, 4 * self.dim, 4, 4)
+    def forward(self, input_tensor, cond=None):
+        output = self.preprocess(input_tensor)
+        output = output.view(-1, 4 * self.dim, self.h_in, self.w_in)
         output = self.block1(output)  # x2 8,8
         output = self.block2(output)  # x2 16,16
         output = self.deconv_out(output)
-
         output_intensity = self.output_nl(self.output_intensity(output))
-
         output = output_intensity
-        return output.view(-1, 1, 32, 32)
+        return output.view(-1, 1, self.h, self.w)
 
 
 class Discriminator(nn.Module):
-    def __init__(self, dim, conditional, condition_size=2):
+    def __init__(self, dim, h, w):
         super(Discriminator, self).__init__()
+        self.h = h
+        self.w = w
+        self.h_in = int(h / 8)
+        self.w_in = int(w / 8)
         self.dim = dim
-        self.conditional = conditional
         main = nn.Sequential(
             nn.Conv2d(1, dim, 5, stride=2, padding=2),
 
@@ -74,16 +70,12 @@ class Discriminator(nn.Module):
 
         )
         self.main = main
-        self.output_size = (4 * 4 * 4 * dim)
-        if self.conditional:
-            self.output_size += condition_size
+        self.output_size = (4 * self.h_in * self.w_in * dim)
         self.output = nn.Linear(self.output_size, 1)
 
     def forward(self, input, cond=None):
-        input = input.view(-1, 1, 32, 32)
+        input = input.view(-1, 1, self.h, self.w)
         out = self.main(input)
-        out = out.view(-1, 4 * 4 * 4 * self.dim)
-        if self.conditional:
-            out = torch.cat([out, cond], dim=1)
+        out = out.view(-1, 4 * self.h_in * self.w_in * self.dim)
         out = self.output(out)
         return out.view(-1)
