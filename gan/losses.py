@@ -24,7 +24,7 @@ class BaseGANLoss(object):
 
 class WGANLoss(BaseGANLoss):
     def __init__(self):
-        super(WGANLoss).__init__(False)
+        super(WGANLoss, self).__init__(False)
 
     @staticmethod
     def loss_critic(d_real, d_fake):
@@ -40,7 +40,7 @@ class WGANLoss(BaseGANLoss):
 
 class GANLoss(BaseGANLoss):
     def __init__(self):
-        super(GANLoss).__init__(False)
+        super(GANLoss, self).__init__(False)
 
     @staticmethod
     def loss_critic(d_real, d_fake):
@@ -58,7 +58,7 @@ class GANLoss(BaseGANLoss):
 
 class LSGANLoss(BaseGANLoss):
     def __init__(self, a=0, b=1, c=1):
-        super(LSGANLoss).__init__(False)
+        super(LSGANLoss, self).__init__(False)
         self.a = a
         self.b = b
         self.c = c
@@ -75,7 +75,7 @@ class LSGANLoss(BaseGANLoss):
 
 class RaSGANLoss(BaseGANLoss):
     def __init__(self):
-        super(RaSGANLoss).__init__(True)
+        super(RaSGANLoss, self).__init__(True)
 
     @staticmethod
     def loss_critic(d_real, d_fake):
@@ -92,7 +92,7 @@ class RaSGANLoss(BaseGANLoss):
 
 class RaLSGAN(BaseGANLoss):
     def __init__(self):
-        super(RaLSGAN).__init__(True)
+        super(RaLSGAN, self).__init__(True)
 
     @staticmethod
     def loss_critic(d_real, d_fake):
