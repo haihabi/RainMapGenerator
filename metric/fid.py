@@ -52,6 +52,8 @@ class FrechetInceptionDistance(object):
         pred_list = []
         for i in range(self.ref_n_samples):
             y = generator(self.batch_size)
+            if isinstance(y, tuple):
+                y = y[0]
             if y.shape[1] == 1:
                 y = y.repeat(1, 3, 1, 1)
             pred_list.append(self._get_pred(y))
