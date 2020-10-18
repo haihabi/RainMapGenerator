@@ -26,8 +26,8 @@ if google_flag:
 
 PROJECT = 'RainMapGenerator'
 
-data_file = '/content/gdrive/My Drive/Runners/Data/rain_data.pickle'
-data_file_val = '/content/gdrive/My Drive/Runners/Data/rain_data_val.pickle'
+# data_file = '/content/gdrive/My Drive/Runners/Data/rain_data.pickle'
+# data_file_val = '/content/gdrive/My Drive/Runners/Data/rain_data_val.pickle'
 
 batch_size = 32
 h = 32
@@ -47,8 +47,8 @@ def arg_parsing():
 
     parser.add_argument('--training_data_pickle', type=str,
                         default='/content/gdrive/My Drive/Runners/Data/rain_data.pickle')
-    parser.add_argument('--training_data_pickle', type=str,
-                        default='/content/gdrive/My Drive/Runners/Data/rain_data.pickle')
+    parser.add_argument('--validation_data_pickle', type=str,
+                        default='/content/gdrive/My Drive/Runners/Data/rain_data_val.pickle')
     ################################
     # Optimizer
     ################################
@@ -84,13 +84,13 @@ if __name__ == '__main__':
         MaxNormalization(),
     ])
     # TODO: add data augmentation
-    train_rds = RadarDataSet(data_file, transform=transform_training)
+    train_rds = RadarDataSet(args.training_data_pickle, transform=transform_training)
     print(train_rds.data_shape)
     train_loader = torch.utils.data.DataLoader(dataset=train_rds,
                                                batch_size=batch_size,
                                                shuffle=True)
 
-    val_rds = RadarDataSet(data_file_val, transform=transform_training)
+    val_rds = RadarDataSet(args.validation_data_pickle, transform=transform_training)
 
     validation_loader = torch.utils.data.DataLoader(dataset=val_rds,
                                                     batch_size=batch_size,
