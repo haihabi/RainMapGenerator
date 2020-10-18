@@ -1,1 +1,2 @@
 from metric.results_averaging import ResultsAveraging
+from metric.fid import FrechetInceptionDistance

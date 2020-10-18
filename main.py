@@ -10,7 +10,7 @@ import gan
 from networks.factory import get_network
 from dataset.radar_static import RadarDataSet
 from dataset.preprocess import MaxNormalization
-from metric import ResultsAveraging
+from metric import ResultsAveraging, FrechetInceptionDistance
 
 wandb_flag = util.find_spec("wandb")
 found_wandb = wandb_flag is not None
@@ -24,6 +24,7 @@ drive.mount('/content/gdrive/')
 PROJECT = 'RainMapGenerator'
 
 data_file = '/content/gdrive/My Drive/Runners/Data/rain_data.pickle'
+data_file_val = '/content/gdrive/My Drive/Runners/Data/rain_data_val.pickle'
 seed = 0
 batch_size = 32
 h = 32
@@ -55,6 +56,12 @@ if __name__ == '__main__':
                                                batch_size=batch_size,
                                                shuffle=True)
 
+    val_rds = RadarDataSet(data_file_val, transform=transform_training)
+
+    validation_loader = torch.utils.data.DataLoader(dataset=val_rds,
+                                                    batch_size=batch_size,
+                                                    shuffle=False)
+    fid = FrechetInceptionDistance(batch_size, validation_loader, working_device)
     net_g, net_d = get_network(z_size, dim, h, w, working_device)
 
     optimizer_d = optim.Adam(net_d.parameters(), lr=lr, betas=betas, weight_decay=wd)
@@ -74,4 +81,5 @@ if __name__ == '__main__':
                 loss_dict = gan_trainer.train_step(step, data=data)
                 batch_results_dict.update({step + k: v for k, v in loss_dict.items()})
             ra.update_results(batch_results_dict)
+            fid.calculate_fid(gan_trainer.get_generator_func())
         wandb.log(ra.results())

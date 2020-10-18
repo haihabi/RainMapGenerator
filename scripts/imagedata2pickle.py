@@ -7,7 +7,7 @@ from dataset.data_common import preprocess_radar_data, load_radar_image, slice
 
 H = 32
 W = 32
-n_samples = 200000
+n_samples = 10000
 image_folder_path = '/data/datasets/radar_maps'
 file_list = os.listdir(image_folder_path)
 print(len(file_list))
@@ -26,4 +26,4 @@ for file_index in tqdm(index_list):
         break
     print(len(image_list))
 
-pickle.dump(image_list, open('/data/datasets/rain_data.pickle', 'wb'))
+pickle.dump(image_list, open('/data/datasets/rain_data_val.pickle', 'wb'))

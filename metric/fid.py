@@ -1,5 +1,7 @@
+import torch
+import numpy as np
 from tqdm import tqdm
-from common.models.inception_v3 import InceptionV3
+from metric.inception_v3 import InceptionV3
 from torch.nn.functional import adaptive_avg_pool2d
 from scipy import linalg
 
@@ -112,59 +114,3 @@ class FrechetInceptionDistance(object):
 
         return (diff.dot(diff) + np.trace(sigma1) +
                 np.trace(sigma2) - 2 * tr_covmean)
-
-
-if __name__ == '__main__':
-    import time
-    import numpy as np
-    import torch
-
-    from torchvision import transforms
-
-    from common.dataset.radar_static import RadarConstantDataSet
-
-    torch.manual_seed(1)
-
-    batch_size = 128
-
-    working_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print("Current Working Device is set to:" + str(working_device))
-
-    transform = transforms.Compose([
-        transforms.ToTensor(),
-    ])
-
-    ds_train = RadarConstantDataSet('/data/datasets/radar_maps', 28, 28, n_total_samples=500)
-    # ds_val = RadarConstantDataSet('/data/datasets/radar_maps', 28, 28, n_total_samples=500)
-
-    train_loader = torch.utils.data.DataLoader(dataset=ds_train,
-                                               batch_size=batch_size,
-                                               shuffle=False)
-
-    # val_loader = torch.utils.data.DataLoader(dataset=ds_train,
-    #                                          batch_size=batch_size,
-    #                                          shuffle=False)
-
-    fid = FrechetInceptionDistance(64, train_loader, working_device)
-    fid_list = []
-    sigma_vector = [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.2, 1.5, 1.8, 2]
-    for sigma in sigma_vector:
-        def gen(z):
-            val_loader = torch.utils.data.DataLoader(dataset=ds_train,
-                                                     batch_size=z.shape[0],
-                                                     shuffle=False)
-            d = iter(val_loader).__next__()
-            d = d + sigma * torch.randn(d.shape)
-            return d.unsqueeze(dim=1).repeat((1, 3, 1, 1))
-
-
-        fid_list.append(fid.calculate_fid(gen))
-        print("Finished Sigma:" + str(sigma))
-    print(fid_list)
-    from matplotlib import pyplot as plt
-
-    plt.plot(sigma_vector, fid_list)
-    plt.grid()
-    plt.xlabel(r'$\sigma$')
-    plt.ylabel('FID Score')
-    plt.show()
