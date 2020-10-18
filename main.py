@@ -12,6 +12,7 @@ from networks.factory import get_network
 from dataset.radar_static import RadarDataSet
 from dataset.preprocess import MaxNormalization
 from metric import ResultsAveraging, FrechetInceptionDistance
+from matplotlib import pyplot as plt
 
 wandb_flag = util.find_spec("wandb")
 found_wandb = wandb_flag is not None
@@ -32,7 +33,6 @@ PROJECT = 'RainMapGenerator'
 batch_size = 32
 h = 32
 w = 32
-# z_size = 128
 dim = 128
 lr_g = 1e-4
 lr_d = 1e-4
@@ -118,7 +118,15 @@ if __name__ == '__main__':
                 batch_results_dict.update({step + k: v for k, v in loss_dict.items()})
             ra.update_results(batch_results_dict)
         result_dict = ra.results()
-        fid_score = fid.calculate_fid(gan_trainer.get_generator_func())
-        result_dict.update({'FID': fid_score})
+        generative_func = gan_trainer.get_generator_func()
+        fid_score = fid.calculate_fid(generative_func)
+        n_example = 4
+        data, _ = generative_func(batch_size=n_example * n_example)
+        data = data.detach().cpu().numpy().reshape(-1, h, w)
+        for i in range(n_example * n_example):
+            plt.subplot(n_example, n_example, i + 1)
+            plt.imshow(data[i, :, :])
+
+        result_dict.update({'FID': fid_score, 'examples': plt})
         wandb.log(result_dict)
         print(f"Finished Epoch:{i} with FID:{fid_score}")
