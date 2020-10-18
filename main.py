@@ -42,12 +42,12 @@ wd = 1e-4
 
 def arg_parsing():
     parser = argparse.ArgumentParser(description='Rain Map Generative Training')
-    parser.add_argument('seed', type=int, default=0)
-    parser.add_argument('n_epoch', type=int, default=20)
+    parser.add_argument('--seed', type=int, default=0)
+    parser.add_argument('--n_epoch', type=int, default=20)
 
-    parser.add_argument('training_data_pickle', type=str,
+    parser.add_argument('--training_data_pickle', type=str,
                         default='/content/gdrive/My Drive/Runners/Data/rain_data.pickle')
-    parser.add_argument('training_data_pickle', type=str,
+    parser.add_argument('--training_data_pickle', type=str,
                         default='/content/gdrive/My Drive/Runners/Data/rain_data.pickle')
     ################################
     # Optimizer
@@ -55,8 +55,8 @@ def arg_parsing():
     ################################
     # GAN
     ################################
-    parser.add_argument('z_size', type=int, default=128)
-    parser.add_argument('sn_enable', action='store_true')
+    parser.add_argument('--z_size', type=int, default=128)
+    parser.add_argument('--sn_enable', action='store_true')
     ################################
     # Network Config
     ################################
@@ -106,7 +106,7 @@ if __name__ == '__main__':
     gan_trainer = gan.GANTraining(gan_cfg, net_d, net_g, optimizer_d, optimizer_g)
 
     ra = ResultsAveraging()
-    for i in range(args.epoch):
+    for i in range(args.n_epoch):
         for data in tqdm(train_loader):
             data = data.to(working_device)
             data = data.float()
