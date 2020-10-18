@@ -81,5 +81,5 @@ if __name__ == '__main__':
                 loss_dict = gan_trainer.train_step(step, data=data)
                 batch_results_dict.update({step + k: v for k, v in loss_dict.items()})
             ra.update_results(batch_results_dict)
-            fid.calculate_fid(gan_trainer.get_generator_func())
+        fid.calculate_fid(gan_trainer.get_generator_func())
         wandb.log(ra.results())
