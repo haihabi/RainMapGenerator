@@ -123,9 +123,9 @@ if __name__ == '__main__':
         n_example = 4
         data, _ = generative_func(batch_size=n_example * n_example)
         data = data.detach().cpu().numpy().reshape(-1, h, w)
-        for i in range(n_example * n_example):
-            plt.subplot(n_example, n_example, i + 1)
-            plt.imshow(data[i, :, :])
+        for j in range(n_example * n_example):
+            plt.subplot(n_example, n_example, j + 1)
+            plt.imshow(data[j, :, :])
 
         result_dict.update({'FID': fid_score, 'examples': plt})
         wandb.log(result_dict)
