@@ -55,8 +55,10 @@ def arg_parsing():
     ################################
     # GAN
     ################################
+    parser.add_argument('--loss_type', type=str, default='WGAN', choices=['WGAN'])
     parser.add_argument('--z_size', type=int, default=128)
     parser.add_argument('--sn_enable', action='store_true')
+    parser.add_argument('--gp_lambda', type=int, default=10)
     ################################
     # Network Config
     ################################
@@ -101,8 +103,8 @@ if __name__ == '__main__':
     optimizer_d = optim.Adam(net_d.parameters(), lr=lr_d, betas=betas, weight_decay=wd)
     optimizer_g = optim.Adam(net_g.parameters(), lr=lr_g, betas=betas, weight_decay=wd)
 
-    gan_cfg = gan.GANConfig(gan.GANType.RaSGAN, batch_size=batch_size, z_size=args.z_size,
-                            input_working_device=working_device, sn_enable=args.sn_enable)
+    gan_cfg = gan.GANConfig(gan.GANType[args.loss_type], batch_size=batch_size, z_size=args.z_size,
+                            input_working_device=working_device, sn_enable=args.sn_enable, gp_lambda=args.gp_lambda)
     gan_trainer = gan.GANTraining(gan_cfg, net_d, net_g, optimizer_d, optimizer_g)
 
     ra = ResultsAveraging()
