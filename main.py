@@ -72,8 +72,8 @@ if __name__ == '__main__':
     fid = FrechetInceptionDistance(batch_size, validation_loader, working_device)
     net_g, net_d = get_network(z_size, dim, h, w, working_device)
 
-    optimizer_d = optim.Adam(net_d.parameters(), lr=lr_g, betas=betas, weight_decay=wd)
-    optimizer_g = optim.Adam(net_g.parameters(), lr=lr_d, betas=betas, weight_decay=wd)
+    optimizer_d = optim.Adam(net_d.parameters(), lr=lr_d, betas=betas, weight_decay=wd)
+    optimizer_g = optim.Adam(net_g.parameters(), lr=lr_g, betas=betas, weight_decay=wd)
 
     gan_cfg = gan.GANConfig(gan.GANType.RaSGAN, batch_size=batch_size, z_size=z_size,
                             input_working_device=working_device, sn_enable=sn_enable)
