@@ -31,10 +31,11 @@ h = 32
 w = 32
 z_size = 128
 dim = 128
-lr = 1e-4
+lr = 1e-5
 betas = (0.5, 0.999)
 wd = 1e-4
-epoch = 10
+epoch = 20
+sn_enable = True
 if __name__ == '__main__':
     args = {}
     print(f"Starting Run of {PROJECT}")
@@ -68,7 +69,7 @@ if __name__ == '__main__':
     optimizer_g = optim.Adam(net_g.parameters(), lr=lr, betas=betas, weight_decay=wd)
 
     gan_cfg = gan.GANConfig(gan.GANType.RaSGAN, batch_size=batch_size, z_size=z_size,
-                            input_working_device=working_device)
+                            input_working_device=working_device, sn_enable=sn_enable)
     gan_trainer = gan.GANTraining(gan_cfg, net_d, net_g, optimizer_d, optimizer_g)
 
     ra = ResultsAveraging()
@@ -85,4 +86,4 @@ if __name__ == '__main__':
         fid_score = fid.calculate_fid(gan_trainer.get_generator_func())
         result_dict.update({'FID': fid_score})
         wandb.log(result_dict)
-        print("Finished Epoch:{}")
+        print(f"Finished Epoch:{i} with FID:{fid_score}")
