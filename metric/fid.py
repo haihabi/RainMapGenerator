@@ -30,6 +30,7 @@ class FrechetInceptionDistance(object):
     def get_activations(self, ds_loader):
         pred_list = []
         for image in tqdm(ds_loader):
+            print(image.shape)
             image = image.unsqueeze(dim=1).repeat((1, 3, 1, 1)).cuda()
             pred_list.append(self._get_pred(image))
             # pred = model(image)[0]
