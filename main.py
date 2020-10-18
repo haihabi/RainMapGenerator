@@ -35,7 +35,7 @@ w = 32
 # z_size = 128
 dim = 128
 lr_g = 1e-4
-lr_d = 2e-4
+lr_d = 1e-4
 betas = (0.5, 0.999)
 wd = 1e-4
 
