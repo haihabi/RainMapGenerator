@@ -18,9 +18,11 @@ if found_wandb:
     print("Found ")
     import wandb
 
-from google.colab import drive
+google_flag = util.find_spec("google")
+google_flag = google_flag is not None
+if google_flag:
+    from google.colab import drive
 
-drive.mount('/content/gdrive/')
 PROJECT = 'RainMapGenerator'
 
 data_file = '/content/gdrive/My Drive/Runners/Data/rain_data.pickle'
@@ -37,6 +39,10 @@ wd = 1e-4
 epoch = 20
 sn_enable = True
 if __name__ == '__main__':
+    if google_flag:
+        print("Mounting Drive Folder...")
+        drive.mount('/content/gdrive/')
+
     args = {}
     print(f"Starting Run of {PROJECT}")
     if found_wandb:
