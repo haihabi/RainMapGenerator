@@ -43,7 +43,7 @@ wd = 1e-4
 def arg_parsing():
     parser = argparse.ArgumentParser(description='Rain Map Generative Training')
     parser.add_argument('--seed', type=int, default=0)
-    parser.add_argument('--n_epoch', type=int, default=20)
+    parser.add_argument('--n_epoch', type=int, default=50)
 
     parser.add_argument('--training_data_pickle', type=str,
                         default='/content/gdrive/My Drive/Runners/Data/rain_data.pickle')
