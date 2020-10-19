@@ -84,6 +84,16 @@ if __name__ == '__main__':
     transform_training = transforms.Compose([
         transforms.ToTensor(),
         MaxNormalization(),
+        transforms.ToPILImage(),
+        transforms.RandomVerticalFlip(),
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomRotation((-180, 180)),
+        transforms.ToTensor()
+    ])
+
+    transform_validation = transforms.Compose([
+        transforms.ToTensor(),
+        MaxNormalization(),
     ])
     # TODO: add data augmentation
     train_rds = RadarDataSet(args.training_data_pickle, transform=transform_training)
@@ -92,7 +102,7 @@ if __name__ == '__main__':
                                                batch_size=batch_size,
                                                shuffle=True)
 
-    val_rds = RadarDataSet(args.validation_data_pickle, transform=transform_training)
+    val_rds = RadarDataSet(args.validation_data_pickle, transform=transform_validation)
 
     validation_loader = torch.utils.data.DataLoader(dataset=val_rds,
                                                     batch_size=batch_size,
