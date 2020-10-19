@@ -58,7 +58,7 @@ def arg_parsing():
     parser.add_argument('--loss_type', type=str, default='WGAN', choices=['WGAN'])
     parser.add_argument('--z_size', type=int, default=128)
     parser.add_argument('--sn_enable', action='store_true')
-    parser.add_argument('--gp_lambda', type=int, default=10)
+    parser.add_argument('--gp_lambda', type=float, default=10)
     ################################
     # Network Config
     ################################
