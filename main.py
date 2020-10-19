@@ -34,8 +34,8 @@ batch_size = 32
 h = 32
 w = 32
 dim = 128
-lr_g = 1e-4
-lr_d = 1e-4
+# lr_g = 1e-4
+# lr_d = 1e-4
 betas = (0.5, 0.999)
 wd = 1e-4
 
@@ -52,6 +52,8 @@ def arg_parsing():
     ################################
     # Optimizer
     ################################
+    parser.add_argument('--lr_g', type=float, default=1e-4)
+    parser.add_argument('--lr_d', type=float, default=1e-4)
     ################################
     # GAN
     ################################
@@ -110,8 +112,8 @@ if __name__ == '__main__':
     fid = FrechetInceptionDistance(batch_size, validation_loader, working_device)
     net_g, net_d = get_network(args.z_size, dim, h, w, working_device)
 
-    optimizer_d = optim.Adam(net_d.parameters(), lr=lr_d, betas=betas, weight_decay=wd)
-    optimizer_g = optim.Adam(net_g.parameters(), lr=lr_g, betas=betas, weight_decay=wd)
+    optimizer_d = optim.Adam(net_d.parameters(), lr=args.lr_d, betas=betas, weight_decay=wd)
+    optimizer_g = optim.Adam(net_g.parameters(), lr=args.lr_g, betas=betas, weight_decay=wd)
 
     gan_cfg = gan.GANConfig(gan.GANType[args.loss_type], batch_size=batch_size, z_size=args.z_size,
                             input_working_device=working_device, sn_enable=args.sn_enable, gp_lambda=args.gp_lambda)
