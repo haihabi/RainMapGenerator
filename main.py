@@ -65,6 +65,7 @@ def arg_parsing():
     # VAE
     ################################
     parser.add_argument('--vae_enable', action='store_true')
+    parser.add_argument('--lr_e', type=float, default=1e-4)
     ################################
     # Network Config
     ################################
@@ -114,14 +115,18 @@ if __name__ == '__main__':
                                                     batch_size=batch_size,
                                                     shuffle=False)
     fid = FrechetInceptionDistance(batch_size, validation_loader, working_device)
-    net_g, net_d = get_network(args.z_size, dim, h, w, working_device)
+    net_g, net_d, net_e = get_network(args.z_size, dim, h, w, args.vae_enable, working_device)
 
     optimizer_d = optim.Adam(net_d.parameters(), lr=args.lr_d, betas=betas, weight_decay=wd)
     optimizer_g = optim.Adam(net_g.parameters(), lr=args.lr_g, betas=betas, weight_decay=wd)
+    optimizer_e = None
+    if args.vae_enable and net_e is not None:
+        optimizer_g = optim.Adam(net_e.parameters(), lr=args.lr_e, betas=betas, weight_decay=wd)
 
     gan_cfg = gan.GANConfig(gan.GANType[args.loss_type], batch_size=batch_size, z_size=args.z_size,
                             input_working_device=working_device, sn_enable=args.sn_enable, gp_lambda=args.gp_lambda)
-    gan_trainer = gan.GANTraining(gan_cfg, net_d, net_g, optimizer_d, optimizer_g)
+    gan_trainer = gan.GANTraining(gan_cfg, net_d, net_g, optimizer_d, optimizer_g, net_encoder=net_e,
+                                  input_optimizer_e=optimizer_e)
 
     ra = ResultsAveraging()
     for i in range(args.n_epoch):
@@ -137,6 +142,7 @@ if __name__ == '__main__':
         generative_func = gan_trainer.get_generator_func()
         fid_score = fid.calculate_fid(generative_func)
         if ra.is_best(fid_score):
+            print("New Best :) everyone loves to play with GANs")
             gan_trainer.update_best()
             n_example = 4
             data, _ = generative_func(batch_size=n_example * n_example, is_best=True)
