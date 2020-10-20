@@ -17,7 +17,6 @@ def require(key, **kwargs):
 
 __loss_dict__ = {GANType.WGAN: WGANLoss(),
                  GANType.GAN: GANLoss(),
-                 GANType.SNGAN: WGANLoss(),
                  GANType.RaSGAN: RaSGANLoss(),
                  GANType.RaLSGAN: RaLSGAN(),
                  GANType.LSGAN: LSGANLoss()}
