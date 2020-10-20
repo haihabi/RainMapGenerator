@@ -11,7 +11,7 @@ class ResultsAveraging(object):
         if self.val is None:
             self.val = val
             status = True
-        elif self.val > val:
+        elif self.val < val:
             status = False
         else:
             self.val = val
