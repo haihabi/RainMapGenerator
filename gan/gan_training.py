@@ -152,13 +152,38 @@ class GANTraining(BaseTrainer):
 
         d_real = self.run_discriminator(real_data, condition) if self.loss.dual_generator else None
         loss_gen = self.loss.loss_generator(d_real, d_fake)
+        mse_loss = 0
+        if self.gan_config.vae:
+            z_real, pred_log_var = self.net_encoder(real_data)
+            fake_ae, _ = self.run_generator(real_data, condition, noise_vector=z_real)
+            mse_loss = torch.pow(fake_ae - real_data, 2.0).mean()  # MSE Loss
 
         loss_dict = {'loss': loss_gen.item()}
         if self.i_critic % self.gan_config.n_critic == 0:
-            loss = loss_gen
-
-            loss_dict.update({'total_loss': loss.item()})
+            loss = loss_gen + mse_loss
+            loss_dict.update({'total_loss': loss.item(), 'loss_gen': loss_gen.item()})
             loss.backward()
             self.optimizer_g.step()
 
         return loss_dict
+
+    def train_encoder(self, real_data, condition):
+        self.optimizer_e.zero_grad()
+
+        mu, log_var = self.net_encoder(real_data)
+        real_z = self.reparameterization(mu, log_var)
+        fake_ae, _ = self.run_generator(real_data, condition, noise_vector=real_z)
+
+        mse_loss = torch.pow(fake_ae - real_data, 2.0).mean()  # MSE Loss
+        kl_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu ** 2 - log_var.exp(), dim=1), dim=0)
+        loss = mse_loss  # + self.gan_config.kl_loss_factor * kl_loss  # TODO: add f
+        loss += self.gan_config.kl_loss_factor * kl_loss
+        loss.backward()
+        if self.gan_config.is_clipping(): nn.utils.clip_grad_norm_(self.net_encoder.parameters(),
+                                                                   self.gan_config.clipping_value)
+        self.optimizer_e.step()
+        return {'Loss': loss.item(), 'MSE': mse_loss.item(), 'KL': kl_loss.item()}
+
+    def reparameterization(self, mu, log_var):
+        std = torch.exp(0.5 * log_var)
+        return mu + std * self.samples_noise(batch_size=std.shape[0])
