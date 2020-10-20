@@ -6,7 +6,6 @@ class GANType(Enum):
     GAN = 1
     WGAN = 2
     LSGAN = 3
-    SNGAN = 5
     RaSGAN = 6
     RaLSGAN = 8
 

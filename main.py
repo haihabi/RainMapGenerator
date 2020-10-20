@@ -57,7 +57,7 @@ def arg_parsing():
     ################################
     # GAN
     ################################
-    parser.add_argument('--loss_type', type=str, default='WGAN', choices=['WGAN'])
+    parser.add_argument('--loss_type', type=str, default='WGAN', choices=['WGAN', 'RaSGAN'])
     parser.add_argument('--z_size', type=int, default=128)
     parser.add_argument('--sn_enable', action='store_true')
     parser.add_argument('--gp_lambda', type=float, default=10)
