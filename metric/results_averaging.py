@@ -5,6 +5,18 @@ class ResultsAveraging(object):
     def __init__(self):
         self.batch_acc = dict()
         self.n = 0
+        self.val = None
+
+    def is_best(self, val):
+        if self.val is None:
+            self.val = val
+            status = True
+        elif self.val > val:
+            status = False
+        else:
+            self.val = val
+            status = True
+        return status
 
     def reset(self):
         self.n = 0

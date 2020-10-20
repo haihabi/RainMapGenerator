@@ -62,6 +62,10 @@ def arg_parsing():
     parser.add_argument('--sn_enable', action='store_true')
     parser.add_argument('--gp_lambda', type=float, default=10)
     ################################
+    # VAE
+    ################################
+    parser.add_argument('--vae_enable', action='store_true')
+    ################################
     # Network Config
     ################################
     args = parser.parse_args()
@@ -132,12 +136,14 @@ if __name__ == '__main__':
         result_dict = ra.results()
         generative_func = gan_trainer.get_generator_func()
         fid_score = fid.calculate_fid(generative_func)
-        n_example = 4
-        data, _ = generative_func(batch_size=n_example * n_example)
-        data = data.detach().cpu().numpy().reshape(-1, h, w)
-        for j in range(n_example * n_example):
-            plt.subplot(n_example, n_example, j + 1)
-            plt.imshow(data[j, :, :])
+        if ra.is_best(fid_score):
+            gan_trainer.update_best()
+            n_example = 4
+            data, _ = generative_func(batch_size=n_example * n_example, is_best=True)
+            data = data.detach().cpu().numpy().reshape(-1, h, w)
+            for j in range(n_example * n_example):
+                plt.subplot(n_example, n_example, j + 1)
+                plt.imshow(data[j, :, :])
 
         result_dict.update({'FID': fid_score, 'examples': plt})
         wandb.log(result_dict)

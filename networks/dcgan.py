@@ -79,3 +79,38 @@ class Discriminator(nn.Module):
         out = out.view(-1, 4 * self.h_in * self.w_in * self.dim)
         out = self.output(out)
         return out.view(-1)
+
+
+class Encoder(nn.Module):
+    def __init__(self, dim, z_size, h, w):
+        super(Encoder, self).__init__()
+        self.h = h
+        self.w = w
+        self.z_size = z_size
+        self.h_in = int(h / 8)
+        self.w_in = int(w / 8)
+        self.dim = dim
+        main = nn.Sequential(
+            nn.Conv2d(1, dim, 5, stride=2, padding=2),
+
+            nn.LeakyReLU(inplace=True),
+            nn.Conv2d(dim, 2 * dim, 5, stride=2, padding=2),
+
+            nn.LeakyReLU(inplace=True),
+            nn.Conv2d(2 * dim, 4 * dim, 5, stride=2, padding=2),
+
+            nn.LeakyReLU(inplace=True),
+
+        )
+        self.main = main
+        self.output_size = (4 * self.h_in * self.w_in * dim)
+        self.output_mu = nn.Linear(self.output_size, z_size)
+        self.output_log_var = nn.Linear(self.output_size, z_size)
+
+    def forward(self, input, cond=None):
+        input = input.view(-1, 1, self.h, self.w)
+        out = self.main(input)
+        out = out.view(-1, 4 * self.h_in * self.w_in * self.dim)
+        out_mu = self.output_mu(out)
+        out_logvar = self.output_log_var(out)
+        return out_mu.view(-1, self.z_size), out_logvar.view(-1, self.z_size)

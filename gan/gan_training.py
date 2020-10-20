@@ -5,6 +5,10 @@ from torch.nn.utils.spectral_norm import spectral_norm
 import copy
 from gan.config import GANConfig
 
+GENERATOR = 'Generator'
+DISCRIMINATOR = 'Discriminator'
+ENCODER = 'Encoder'
+
 
 # Make all layers to be spectral normalization layer
 def add_sn(m):
@@ -32,25 +36,31 @@ class BaseTrainer(object):
 
 
 class GANTraining(BaseTrainer):
-    def __init__(self, gan_config: GANConfig, net_discriminator, net_g, input_optimizer_d, input_optimizer_g):
-        super(GANTraining, self).__init__(gan_config, ['Discriminator', 'Generator'])
+    def __init__(self, gan_config: GANConfig, net_discriminator, net_g, input_optimizer_d, input_optimizer_g,
+                 net_encoder=None, input_optimizer_e=None):
+        steps_list = [DISCRIMINATOR, GENERATOR]
+        if net_encoder is not None and input_optimizer_e is not None:
+            steps_list.append(ENCODER)
+        super(GANTraining, self).__init__(gan_config, steps_list)
 
         self.net_discriminator = net_discriminator
         self.net_g = net_g
+        self.net_encoder = net_encoder
         if gan_config.is_spectral_norm():
             self.net_discriminator.apply(add_sn)
             print("Applying Spectral-Norm to discriminator")
         self.optimizer_d = input_optimizer_d
         self.optimizer_g = input_optimizer_g
+        self.optimizer_e = input_optimizer_e
         self.loss = gan_config.get_loss()
         self.i_critic = 0
         self.net_g_best = None
         self.update_best()
 
     def train_step(self, step, **kwargs):
-        if step == 'Discriminator':
+        if step == DISCRIMINATOR:
             return self.train_discriminator(kwargs['data'], condition=kwargs.get('condition'))
-        elif step == 'Generator':
+        elif step == GENERATOR:
             return self.train_generator(kwargs['data'], condition=kwargs.get('condition'))
 
     def calc_gradient_penalty(self, real_data, fake_data):
