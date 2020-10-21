@@ -66,6 +66,7 @@ def arg_parsing():
     ################################
     parser.add_argument('--vae_enable', action='store_true')
     parser.add_argument('--lr_e', type=float, default=1e-4)
+    parser.add_argument('--kl_loss_factor', type=float, default=3)
     ################################
     # Network Config
     ################################
@@ -124,7 +125,8 @@ if __name__ == '__main__':
         optimizer_g = optim.Adam(net_e.parameters(), lr=args.lr_e, betas=betas, weight_decay=wd)
 
     gan_cfg = gan.GANConfig(gan.GANType[args.loss_type], batch_size=batch_size, z_size=args.z_size,
-                            input_working_device=working_device, sn_enable=args.sn_enable, gp_lambda=args.gp_lambda)
+                            input_working_device=working_device, sn_enable=args.sn_enable, gp_lambda=args.gp_lambda,
+                            kl_loss_factor=args.kl_loss_factor)
     gan_trainer = gan.GANTraining(gan_cfg, net_d, net_g, optimizer_d, optimizer_g, net_encoder=net_e,
                                   input_optimizer_e=optimizer_e)
 
