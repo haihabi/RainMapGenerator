@@ -11,6 +11,7 @@ import gan
 from networks.factory import get_network
 from dataset.radar_static import RadarDataSet
 from dataset.preprocess import MaxNormalization
+from dataset.blob_annotations import BlobAnnotations
 from metric import ResultsAveraging, FrechetInceptionDistance
 from matplotlib import pyplot as plt
 
@@ -96,7 +97,9 @@ if __name__ == '__main__':
         transforms.RandomVerticalFlip(),
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation((-180, 180)),
-        transforms.ToTensor()
+        transforms.ToTensor(),
+        BlobAnnotations(h, w)
+
     ])
 
     transform_validation = transforms.Compose([
@@ -132,9 +135,8 @@ if __name__ == '__main__':
 
     ra = ResultsAveraging()
     for i in range(args.n_epoch):
-        for data in tqdm(train_loader):
+        for data, label in tqdm(train_loader):
             data = data.to(working_device)
-            data = data.float()
             batch_results_dict = {}
             for step in gan_trainer.get_steps():
                 loss_dict = gan_trainer.train_step(step, data=data)
