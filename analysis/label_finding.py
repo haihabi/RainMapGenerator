@@ -33,7 +33,7 @@ for i in range(len(train_rds)):
                    axis=-1))
         x_blob = xy1.flatten()[distance < blob[-1]].astype('uint16')
         y_blob = xy2.flatten()[distance < blob[-1]].astype('uint16')
-        rain_mm = image[x_blob, y_blob].sum()
+        rain_mm = image[x_blob, y_blob].mean()
         print(rain_mm, len(x_blob), blob)
 
     fig, axes = plt.subplots(1, 3)

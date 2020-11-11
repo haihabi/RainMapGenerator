@@ -4,6 +4,7 @@ from networks.dcgan import Generator, Discriminator, Encoder
 
 class NetworkName(Enum):
     DCGAN = 0
+    REFINEMENT = 1
 
 
 def get_network(z_size, dim, h, w, vae_enable, input_working_device):

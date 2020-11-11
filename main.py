@@ -24,7 +24,10 @@ if found_wandb:
 google_flag = util.find_spec("google")
 google_flag = google_flag is not None
 if google_flag:
-    from google.colab import drive
+    try:
+        from google.colab import drive
+    except:
+        google_flag = False
 
 PROJECT = 'RainMapGenerator'
 
@@ -41,15 +44,19 @@ betas = (0.5, 0.999)
 wd = 1e-4
 
 
+def collect_fn(batch):
+    return torch.stack([b[0] for b in batch], dim=0), [dp[1] for dp in batch]
+
+
 def arg_parsing():
     parser = argparse.ArgumentParser(description='Rain Map Generative Training')
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--n_epoch', type=int, default=50)
 
     parser.add_argument('--training_data_pickle', type=str,
-                        default='/content/gdrive/My Drive/Runners/Data/rain_data.pickle')
+                        default='/content/gdrive/My Drive/Runners/Data/rain_data.pickle' if google_flag else '/data/datasets/rain_data.pickle')
     parser.add_argument('--validation_data_pickle', type=str,
-                        default='/content/gdrive/My Drive/Runners/Data/rain_data_val.pickle')
+                        default='/content/gdrive/My Drive/Runners/Data/rain_data_val.pickle' if google_flag else '/data/datasets/rain_data.pickle')
     ################################
     # Optimizer
     ################################
@@ -111,7 +118,8 @@ if __name__ == '__main__':
     print(train_rds.data_shape)
     train_loader = torch.utils.data.DataLoader(dataset=train_rds,
                                                batch_size=batch_size,
-                                               shuffle=True)
+                                               shuffle=True,
+                                               collate_fn=collect_fn)
 
     val_rds = RadarDataSet(args.validation_data_pickle, transform=transform_validation)
 

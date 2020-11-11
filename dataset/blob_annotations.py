@@ -20,7 +20,7 @@ class BlobAnnotations(object):
             distance = np.sqrt(np.sum(np.power(self.xy - blob[:-1].reshape(1, -1), 2.0), axis=-1))
             x_blob = self.xx[distance < blob[-1]].astype('uint16')
             y_blob = self.yy[distance < blob[-1]].astype('uint16')
-            rain_mm = image[x_blob, y_blob].sum()
+            rain_mm = image[x_blob, y_blob].mean()
             rain_per_blob.append(rain_mm)
         annotations = np.concatenate([blobs_doh, np.asarray(rain_per_blob).reshape(-1, 1)], axis=1)
         return pic.float(), torch.from_numpy(annotations).float()
