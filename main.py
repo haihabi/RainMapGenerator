@@ -11,7 +11,6 @@ import gan
 from networks.factory import get_network
 from dataset.radar_static import RadarDataSet
 from dataset.preprocess import MaxNormalization
-from dataset.blob_annotations import BlobAnnotations
 from metric import ResultsAveraging, FrechetInceptionDistance
 from matplotlib import pyplot as plt
 
@@ -42,10 +41,6 @@ dim = 128
 # lr_d = 1e-4
 betas = (0.5, 0.999)
 wd = 1e-4
-
-
-def collect_fn(batch):
-    return torch.stack([b[0] for b in batch], dim=0), [dp[1] for dp in batch]
 
 
 def arg_parsing():
@@ -105,7 +100,6 @@ if __name__ == '__main__':
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation((-180, 180)),
         transforms.ToTensor(),
-        # BlobAnnotations(h, w)
 
     ])
 
@@ -118,8 +112,7 @@ if __name__ == '__main__':
     print(train_rds.data_shape)
     train_loader = torch.utils.data.DataLoader(dataset=train_rds,
                                                batch_size=batch_size,
-                                               shuffle=True,
-                                               collate_fn=collect_fn)
+                                               shuffle=True)
 
     val_rds = RadarDataSet(args.validation_data_pickle, transform=transform_validation)
 
