@@ -136,7 +136,7 @@ if __name__ == '__main__':
 
     ra = ResultsAveraging()
     for i in range(args.n_epoch):
-        for data, label in tqdm(train_loader):
+        for data in tqdm(train_loader):
             data = data.to(working_device)
             batch_results_dict = {}
             for step in gan_trainer.get_steps():
