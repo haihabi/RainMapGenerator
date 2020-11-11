@@ -105,7 +105,7 @@ if __name__ == '__main__':
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation((-180, 180)),
         transforms.ToTensor(),
-        BlobAnnotations(h, w)
+        # BlobAnnotations(h, w)
 
     ])
 
