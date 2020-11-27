@@ -101,6 +101,7 @@ if __name__ == '__main__':
         transforms.RandomRotation((-180, 180)),
         transforms.ToTensor(),
 
+
     ])
 
     transform_validation = transforms.Compose([
