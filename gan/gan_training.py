@@ -180,7 +180,8 @@ class GANTraining(BaseTrainer):
 
         loss.backward()
         if self.gan_config.is_clipping():
-            nn.utils.clip_grad_norm_(self.net_encoder.parameters(), self.gan_config.clipping_value)
+            if self.has_encoder:
+                nn.utils.clip_grad_norm_(self.net_encoder.parameters(), self.gan_config.clipping_value)
             nn.utils.clip_grad_norm_(self.net_g.parameters(), self.gan_config.clipping_value)
         self.optimizer_g.step()
 
