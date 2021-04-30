@@ -28,8 +28,7 @@ def key_exists(key, **kwargs):
 
 class GANConfig(object):
     def __init__(self, gan_type: GANType, batch_size: int, z_size: int, input_working_device, conditional: bool = False,
-                 sn_enable=False, gp_lambda=0, vae=False, kl_loss_factor=1,
-                 n_critic=1):
+                 sn_enable=False, gp_lambda=0, kl_loss_factor=1, n_critic=1):
         self.gan_type = gan_type
         self.working_device = input_working_device
         self.batch_size = batch_size
@@ -39,7 +38,6 @@ class GANConfig(object):
         self.gp_lambda = gp_lambda
         self.sn_enable = sn_enable
         self.n_critic = n_critic
-        self.vae = vae
         self.kl_loss_factor = kl_loss_factor
 
     def is_spectral_norm(self):

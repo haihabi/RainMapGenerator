@@ -1,7 +1,7 @@
 from torchvision import transforms
 from dataset.radar_static import RadarDataSet
 from dataset.preprocess import MaxNormalization
-from dataset.blob_annotations import BlobAnnotations
+from analysis.blob_annotations import BlobAnnotations
 from matplotlib import pyplot as plt
 import numpy as np
 from skimage.feature import blob_dog, blob_log, blob_doh

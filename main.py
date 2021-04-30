@@ -30,15 +30,10 @@ if google_flag:
 
 PROJECT = 'RainMapGenerator'
 
-# data_file = '/content/gdrive/My Drive/Runners/Data/rain_data.pickle'
-# data_file_val = '/content/gdrive/My Drive/Runners/Data/rain_data_val.pickle'
-
 batch_size = 32
 h = 32
 w = 32
 dim = 128
-# lr_g = 1e-4
-# lr_d = 1e-4
 betas = (0.5, 0.999)
 wd = 1e-4
 
@@ -101,14 +96,13 @@ if __name__ == '__main__':
         transforms.RandomRotation((-180, 180)),
         transforms.ToTensor(),
 
-
     ])
 
     transform_validation = transforms.Compose([
         transforms.ToTensor(),
         MaxNormalization(),
     ])
-    # TODO: add data augmentation
+
     train_rds = RadarDataSet(args.training_data_pickle, transform=transform_training)
     print(train_rds.data_shape)
     train_loader = torch.utils.data.DataLoader(dataset=train_rds,
@@ -124,16 +118,15 @@ if __name__ == '__main__':
     net_g, net_d, net_e = get_network(args.z_size, dim, h, w, args.vae_enable, working_device)
 
     optimizer_d = optim.Adam(net_d.parameters(), lr=args.lr_d, betas=betas, weight_decay=wd)
-    optimizer_g = optim.Adam(net_g.parameters(), lr=args.lr_g, betas=betas, weight_decay=wd)
-    optimizer_e = None
-    if args.vae_enable and net_e is not None:
-        optimizer_g = optim.Adam(net_e.parameters(), lr=args.lr_e, betas=betas, weight_decay=wd)
+    optimizer_g = optim.Adam(net_g.parameters(), lr=args.lr_g, betas=betas)
+    if net_e is not None:
+        optimizer_g = optim.Adam([{'params': net_e.parameters(), 'lr': args.lr_e, 'betas': betas, 'weight_decay': wd},
+                                  {'params': net_g.parameters(), 'lr': args.lr_g, 'betas': betas}])
 
     gan_cfg = gan.GANConfig(gan.GANType[args.loss_type], batch_size=batch_size, z_size=args.z_size,
                             input_working_device=working_device, sn_enable=args.sn_enable, gp_lambda=args.gp_lambda,
                             kl_loss_factor=args.kl_loss_factor)
-    gan_trainer = gan.GANTraining(gan_cfg, net_d, net_g, optimizer_d, optimizer_g, net_encoder=net_e,
-                                  input_optimizer_e=optimizer_e)
+    gan_trainer = gan.GANTraining(gan_cfg, net_d, net_g, optimizer_d, optimizer_g, net_encoder=net_e)
 
     ra = ResultsAveraging()
     for i in range(args.n_epoch):

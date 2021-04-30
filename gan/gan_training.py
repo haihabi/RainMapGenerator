@@ -7,7 +7,6 @@ from gan.config import GANConfig
 
 GENERATOR = 'Generator'
 DISCRIMINATOR = 'Discriminator'
-ENCODER = 'Encoder'
 
 
 # Make all layers to be spectral normalization layer
@@ -37,23 +36,18 @@ class BaseTrainer(object):
 
 class GANTraining(BaseTrainer):
     def __init__(self, gan_config: GANConfig, net_discriminator, net_g, input_optimizer_d, input_optimizer_g,
-                 net_encoder=None, input_optimizer_e=None):
-        steps_list = [DISCRIMINATOR, GENERATOR]
-        if net_encoder is not None and input_optimizer_e is not None:
-            steps_list.append(ENCODER)
-        super(GANTraining, self).__init__(gan_config, steps_list)
-
+                 net_encoder=None):
+        super(GANTraining, self).__init__(gan_config, [DISCRIMINATOR, GENERATOR])
         self.net_discriminator = net_discriminator
         self.net_g = net_g
         self.net_encoder = net_encoder
+        self.has_encoder = net_encoder is not None
         if gan_config.is_spectral_norm():
             self.net_discriminator.apply(add_sn)
             print("Applying Spectral-Norm to discriminator")
         self.optimizer_d = input_optimizer_d
         self.optimizer_g = input_optimizer_g
-        self.optimizer_e = input_optimizer_e
         self.loss = gan_config.get_loss()
-        self.i_critic = 0
         self.net_g_best = None
         self.update_best()
 
@@ -115,7 +109,6 @@ class GANTraining(BaseTrainer):
             return self.net_g(noise_vector), noise_vector
 
     def train_discriminator(self, real_data, condition):
-        self.i_critic += 1
         gradient_penalty = 0
         for p in self.net_discriminator.parameters():  # reset requires_grad
             p.requires_grad = True  # they are set to False below in netG update
@@ -133,13 +126,20 @@ class GANTraining(BaseTrainer):
 
         loss = self.loss.loss_critic(d_real, d_fake)
         loss.backward()
+        ########################################################
+        # Gradient Penalty
+        ########################################################
         if self.gan_config.enable_gp() > 0:
             gradient_penalty = self.gan_config.gp_lambda * self.calc_gradient_penalty(real_data.data, gen_data.data)
             gradient_penalty.backward()
-
+        ########################################################
+        # Gradient Clipping
+        ########################################################
+        if self.gan_config.is_clipping():
+            nn.utils.clip_grad_norm_(self.net_discriminator.parameters(), self.gan_config.clipping_value)
         d_cost = (loss + gradient_penalty).item()
         self.optimizer_d.step()
-        return {'loss': d_cost}
+        return {'total_loss': d_cost, 'gradient_penalty': gradient_penalty.item(), 'loss': loss.item()}
 
     def train_generator(self, real_data, condition):
 
@@ -152,37 +152,29 @@ class GANTraining(BaseTrainer):
 
         d_real = self.run_discriminator(real_data, condition) if self.loss.dual_generator else None
         loss_gen = self.loss.loss_generator(d_real, d_fake)
+        #######################################################
+        # VAE Loss
+        ######################################################
         mse_loss = 0
-        if self.gan_config.vae:
-            z_real, pred_log_var = self.net_encoder(real_data)
-            fake_ae, _ = self.run_generator(real_data, condition, noise_vector=z_real)
-            mse_loss = torch.pow(fake_ae - real_data, 2.0).mean()  # MSE Loss
+        kl_loss = 0
+        if self.has_encoder:
+            mu, log_var = self.net_encoder(real_data)
+            z_hat = self.reparameterization(mu, log_var)
+            fake_vae, _ = self.run_generator(real_data, condition, noise_vector=z_hat)
+            mse_loss = torch.pow(fake_vae - real_data, 2.0).mean()  # MSE Loss
+            kl_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu ** 2 - log_var.exp(), dim=1), dim=0)
 
-        loss_dict = {'loss': loss_gen.item()}
-        if self.i_critic % self.gan_config.n_critic == 0:
-            loss = loss_gen + mse_loss
-            loss_dict.update({'total_loss': loss.item(), 'loss_gen': loss_gen.item()})
-            loss.backward()
-            self.optimizer_g.step()
+        loss = loss_gen + mse_loss + self.gan_config.kl_loss_factor * kl_loss
+        loss_dict = {'total_loss': loss.item(), 'loss_gen': loss_gen.item(), 'kl_loss': kl_loss.item(),
+                     'mse_loss': mse_loss.item()}
+
+        loss.backward()
+        if self.gan_config.is_clipping():
+            nn.utils.clip_grad_norm_(self.net_encoder.parameters(), self.gan_config.clipping_value)
+            nn.utils.clip_grad_norm_(self.net_g.parameters(), self.gan_config.clipping_value)
+        self.optimizer_g.step()
 
         return loss_dict
-
-    def train_encoder(self, real_data, condition):
-        self.optimizer_e.zero_grad()
-
-        mu, log_var = self.net_encoder(real_data)
-        real_z = self.reparameterization(mu, log_var)
-        fake_ae, _ = self.run_generator(real_data, condition, noise_vector=real_z)
-
-        mse_loss = torch.pow(fake_ae - real_data, 2.0).mean()  # MSE Loss
-        kl_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu ** 2 - log_var.exp(), dim=1), dim=0)
-        loss = mse_loss  # + self.gan_config.kl_loss_factor * kl_loss  # TODO: add f
-        loss += self.gan_config.kl_loss_factor * kl_loss
-        loss.backward()
-        if self.gan_config.is_clipping(): nn.utils.clip_grad_norm_(self.net_encoder.parameters(),
-                                                                   self.gan_config.clipping_value)
-        self.optimizer_e.step()
-        return {'Loss': loss.item(), 'MSE': mse_loss.item(), 'KL': kl_loss.item()}
 
     def reparameterization(self, mu, log_var):
         std = torch.exp(0.5 * log_var)
