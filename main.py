@@ -29,19 +29,16 @@ if google_flag:
         google_flag = False
 
 PROJECT = 'RainMapGenerator'
-
-batch_size = 32
 h = 32
 w = 32
 dim = 128
-betas = (0.5, 0.999)
-wd = 1e-4
 
 
 def arg_parsing():
     parser = argparse.ArgumentParser(description='Rain Map Generative Training')
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--n_epoch', type=int, default=50)
+    parser.add_argument('--batch_size', type=int, default=32)
 
     parser.add_argument('--training_data_pickle', type=str,
                         default='/content/gdrive/My Drive/Runners/Data/rain_data.pickle' if google_flag else '/data/datasets/rain_data.pickle')
@@ -52,6 +49,9 @@ def arg_parsing():
     ################################
     parser.add_argument('--lr_g', type=float, default=1e-4)
     parser.add_argument('--lr_d', type=float, default=1e-4)
+    parser.add_argument('--weight_decay', type=float, default=1e-4)
+    parser.add_argument('--beta1', type=float, default=0.5)
+    parser.add_argument('--beta2', type=float, default=0.999)
     ################################
     # GAN
     ################################
@@ -106,24 +106,25 @@ if __name__ == '__main__':
     train_rds = RadarDataSet(args.training_data_pickle, transform=transform_training)
     print(train_rds.data_shape)
     train_loader = torch.utils.data.DataLoader(dataset=train_rds,
-                                               batch_size=batch_size,
+                                               batch_size=args.batch_size,
                                                shuffle=True)
 
     val_rds = RadarDataSet(args.validation_data_pickle, transform=transform_validation)
 
     validation_loader = torch.utils.data.DataLoader(dataset=val_rds,
-                                                    batch_size=batch_size,
+                                                    batch_size=args.batch_size,
                                                     shuffle=False)
-    fid = FrechetInceptionDistance(batch_size, validation_loader, working_device)
+    fid = FrechetInceptionDistance(args.batch_size, validation_loader, working_device)
     net_g, net_d, net_e = get_network(args.z_size, dim, h, w, args.vae_enable, working_device)
-
-    optimizer_d = optim.Adam(net_d.parameters(), lr=args.lr_d, betas=betas, weight_decay=wd)
+    betas = (args.beta1, args.beta2)
+    optimizer_d = optim.Adam(net_d.parameters(), lr=args.lr_d, betas=betas, weight_decay=args.weight_decay)
     optimizer_g = optim.Adam(net_g.parameters(), lr=args.lr_g, betas=betas)
     if net_e is not None:
-        optimizer_g = optim.Adam([{'params': net_e.parameters(), 'lr': args.lr_e, 'betas': betas, 'weight_decay': wd},
-                                  {'params': net_g.parameters(), 'lr': args.lr_g, 'betas': betas}])
+        optimizer_g = optim.Adam(
+            [{'params': net_e.parameters(), 'lr': args.lr_e, 'betas': betas, 'weight_decay': args.weight_decay},
+             {'params': net_g.parameters(), 'lr': args.lr_g, 'betas': betas}])
 
-    gan_cfg = gan.GANConfig(gan.GANType[args.loss_type], batch_size=batch_size, z_size=args.z_size,
+    gan_cfg = gan.GANConfig(gan.GANType[args.loss_type], batch_size=args.batch_size, z_size=args.z_size,
                             input_working_device=working_device, sn_enable=args.sn_enable, gp_lambda=args.gp_lambda,
                             kl_loss_factor=args.kl_loss_factor)
     gan_trainer = gan.GANTraining(gan_cfg, net_d, net_g, optimizer_d, optimizer_g, net_encoder=net_e)
