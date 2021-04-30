@@ -93,7 +93,7 @@ if __name__ == '__main__':
         transforms.ToPILImage(),
         transforms.RandomVerticalFlip(),
         transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation((-180, 180)),
+        # transforms.RandomRotation((-180, 180)),
         transforms.ToTensor(),
 
     ])
