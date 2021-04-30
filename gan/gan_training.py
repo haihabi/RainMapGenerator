@@ -9,6 +9,12 @@ GENERATOR = 'Generator'
 DISCRIMINATOR = 'Discriminator'
 
 
+def get_value(t):
+    if isinstance(t, torch.Tensor):
+        return t.item()
+    return t
+
+
 # Make all layers to be spectral normalization layer
 def add_sn(m):
     if isinstance(m, (nn.Conv2d, nn.ConvTranspose2d, nn.Linear)):
@@ -137,9 +143,11 @@ class GANTraining(BaseTrainer):
         ########################################################
         if self.gan_config.is_clipping():
             nn.utils.clip_grad_norm_(self.net_discriminator.parameters(), self.gan_config.clipping_value)
-        d_cost = (loss + gradient_penalty).item()
+        d_cost = loss + gradient_penalty
         self.optimizer_d.step()
-        return {'total_loss': d_cost, 'gradient_penalty': gradient_penalty.item(), 'loss': loss.item()}
+        return {'total_loss': get_value(d_cost),
+                'gradient_penalty': get_value(gradient_penalty),
+                'loss': get_value(loss)}
 
     def train_generator(self, real_data, condition):
 
@@ -165,8 +173,10 @@ class GANTraining(BaseTrainer):
             kl_loss = torch.mean(-0.5 * torch.sum(1 + log_var - mu ** 2 - log_var.exp(), dim=1), dim=0)
 
         loss = loss_gen + mse_loss + self.gan_config.kl_loss_factor * kl_loss
-        loss_dict = {'total_loss': loss.item(), 'loss_gen': loss_gen.item(), 'kl_loss': kl_loss.item(),
-                     'mse_loss': mse_loss.item()}
+        loss_dict = {'total_loss': get_value(loss),
+                     'loss_gen': get_value(loss_gen),
+                     'kl_loss': get_value(kl_loss),
+                     'mse_loss': get_value(mse_loss)}
 
         loss.backward()
         if self.gan_config.is_clipping():
