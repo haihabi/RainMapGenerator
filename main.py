@@ -41,9 +41,9 @@ def arg_parsing():
     parser.add_argument('--batch_size', type=int, default=32)
 
     parser.add_argument('--training_data_pickle', type=str,
-                        default='/content/gdrive/My Drive/Runners/Data/rain_data.pickle' if google_flag else '/data/datasets/rain_data.pickle')
+                        default='/content/data/rain_data.pickle' if google_flag else '/data/datasets/rain_data.pickle')
     parser.add_argument('--validation_data_pickle', type=str,
-                        default='/content/gdrive/My Drive/Runners/Data/rain_data_val.pickle' if google_flag else '/data/datasets/rain_data.pickle')
+                        default='/content/data/rain_data_val.pickle' if google_flag else '/data/datasets/rain_data.pickle')
     ################################
     # Optimizer
     ################################
