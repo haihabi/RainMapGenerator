@@ -1,7 +1,6 @@
 import torch
 import argparse
-from torchvision.transforms import RandomHorizontalFlip, \
-    RandomVerticalFlip
+import os
 from importlib import util
 from torchvision import transforms
 from torch import optim
@@ -93,7 +92,6 @@ if __name__ == '__main__':
         transforms.ToPILImage(),
         transforms.RandomVerticalFlip(),
         transforms.RandomHorizontalFlip(),
-        # transforms.RandomRotation((-180, 180)),
         transforms.ToTensor(),
 
     ])
@@ -143,7 +141,9 @@ if __name__ == '__main__':
         fid_score = fid.calculate_fid(generative_func)
         if ra.is_best(fid_score):
             print("New Best :) everyone loves to play with GANs")
-            gan_trainer.update_best()
+            net2save = gan_trainer.update_best()
+            torch.save(net2save.state_dict(), os.path.join(wandb.run.dir, "model_best.pt"))
+
             n_example = 4
             data, _ = generative_func(batch_size=n_example * n_example, is_best=True)
             data = data.detach().cpu().numpy().reshape(-1, h, w)

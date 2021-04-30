@@ -84,6 +84,7 @@ class GANTraining(BaseTrainer):
         print("Updating Best Generator")
         del self.net_g_best
         self.net_g_best = copy.deepcopy(self.net_g)
+        return self.net_g_best
 
     def get_generator_func(self):
         def func(batch_size=None, is_best=False, cond=None):
