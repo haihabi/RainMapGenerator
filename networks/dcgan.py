@@ -8,6 +8,8 @@ class Generator(nn.Module):
         self.z_size = z_size
         self.h_in = int(h / 8)
         self.w_in = int(w / 8)
+        self.h_mid = int(h / 4)
+        self.w_mid = int(w / 4)
         self.h = h
         self.w = w
 
@@ -23,7 +25,7 @@ class Generator(nn.Module):
             nn.ReLU(True),
         )
         preprocess_1 = nn.Sequential(
-            nn.Linear(self.z_size, 2 * int(h / 4) * int(w / 4) * dim),
+            nn.Linear(self.z_size, 2 * self.h_mid * self.w_mid * dim),
             nn.ELU(),
         )
         block2 = nn.Sequential(
@@ -47,8 +49,8 @@ class Generator(nn.Module):
         output = self.preprocess(input_tensor)
         output = output.view(-1, 4 * self.dim, self.h_in, self.w_in)
         output = self.block1(output)  # x2 8,8
-        output_z = self.preprocess_1(input_tensor)
-        output = torch.cat([output, output_z])
+        output_z = self.preprocess_1(input_tensor).view(-1, 2 * self.dim, self.h_mid, self.w_mid)
+        output = torch.cat([output, output_z], dim=1)
         output = self.block2(output)  # x2 16,16
         output = self.deconv_out(output)
         output_intensity = self.output_nl(self.output_intensity(output))
