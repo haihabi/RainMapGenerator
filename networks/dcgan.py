@@ -15,15 +15,19 @@ class Generator(nn.Module):
         norm_class = nn.Identity
         preprocess = nn.Sequential(
             nn.Linear(self.z_size, 4 * self.h_in * self.w_in * dim),
-            nn.ReLU(True),
+            nn.ELU(),
         )
         block1 = nn.Sequential(
             nn.ConvTranspose2d(4 * dim, 2 * dim, 2, stride=2),
             norm_class(),
             nn.ReLU(True),
         )
+        preprocess_1 = nn.Sequential(
+            nn.Linear(self.z_size, 2 * int(h / 4) * int(w / 4) * dim),
+            nn.ELU(),
+        )
         block2 = nn.Sequential(
-            nn.ConvTranspose2d(2 * dim, dim, 2, stride=2, padding=0),
+            nn.ConvTranspose2d(4 * dim, dim, 2, stride=2, padding=0),
             norm_class(),
             nn.ReLU(True),
         )
@@ -35,6 +39,7 @@ class Generator(nn.Module):
         self.block2 = block2
         self.deconv_out = deconv_out
         self.preprocess = preprocess
+        self.preprocess_1 = preprocess_1
         self.eps = 1e-6
         self.output_nl = nn.Sigmoid()
 
@@ -42,6 +47,8 @@ class Generator(nn.Module):
         output = self.preprocess(input_tensor)
         output = output.view(-1, 4 * self.dim, self.h_in, self.w_in)
         output = self.block1(output)  # x2 8,8
+        output_z = self.preprocess_1(input_tensor)
+        output = torch.cat([output, output_z])
         output = self.block2(output)  # x2 16,16
         output = self.deconv_out(output)
         output_intensity = self.output_nl(self.output_intensity(output))
