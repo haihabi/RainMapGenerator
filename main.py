@@ -1,7 +1,6 @@
 import torch
 import argparse
-from torchvision.transforms import RandomHorizontalFlip, \
-    RandomVerticalFlip
+import os
 from importlib import util
 from torchvision import transforms
 from torch import optim
@@ -23,37 +22,35 @@ if found_wandb:
 google_flag = util.find_spec("google")
 google_flag = google_flag is not None
 if google_flag:
-    from google.colab import drive
+    try:
+        from google.colab import drive
+    except:
+        google_flag = False
 
 PROJECT = 'RainMapGenerator'
-
-# data_file = '/content/gdrive/My Drive/Runners/Data/rain_data.pickle'
-# data_file_val = '/content/gdrive/My Drive/Runners/Data/rain_data_val.pickle'
-
-batch_size = 32
 h = 32
 w = 32
 dim = 128
-# lr_g = 1e-4
-# lr_d = 1e-4
-betas = (0.5, 0.999)
-wd = 1e-4
 
 
 def arg_parsing():
     parser = argparse.ArgumentParser(description='Rain Map Generative Training')
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--n_epoch', type=int, default=50)
+    parser.add_argument('--batch_size', type=int, default=32)
 
     parser.add_argument('--training_data_pickle', type=str,
-                        default='/content/gdrive/My Drive/Runners/Data/rain_data.pickle')
+                        default='/content/data/rain_data.pickle' if google_flag else '/data/datasets/rain_data.pickle')
     parser.add_argument('--validation_data_pickle', type=str,
-                        default='/content/gdrive/My Drive/Runners/Data/rain_data_val.pickle')
+                        default='/content/data/rain_data_val.pickle' if google_flag else '/data/datasets/rain_data.pickle')
     ################################
     # Optimizer
     ################################
     parser.add_argument('--lr_g', type=float, default=1e-4)
     parser.add_argument('--lr_d', type=float, default=1e-4)
+    parser.add_argument('--weight_decay', type=float, default=1e-4)
+    parser.add_argument('--beta1', type=float, default=0.5)
+    parser.add_argument('--beta2', type=float, default=0.999)
     ################################
     # GAN
     ################################
@@ -66,6 +63,7 @@ def arg_parsing():
     ################################
     parser.add_argument('--vae_enable', action='store_true')
     parser.add_argument('--lr_e', type=float, default=1e-4)
+    parser.add_argument('--kl_loss_factor', type=float, default=3)
     ################################
     # Network Config
     ################################
@@ -94,45 +92,45 @@ if __name__ == '__main__':
         transforms.ToPILImage(),
         transforms.RandomVerticalFlip(),
         transforms.RandomHorizontalFlip(),
-        transforms.RandomRotation((-180, 180)),
-        transforms.ToTensor()
+        transforms.ToTensor(),
+
     ])
 
     transform_validation = transforms.Compose([
         transforms.ToTensor(),
         MaxNormalization(),
     ])
-    # TODO: add data augmentation
+
     train_rds = RadarDataSet(args.training_data_pickle, transform=transform_training)
     print(train_rds.data_shape)
     train_loader = torch.utils.data.DataLoader(dataset=train_rds,
-                                               batch_size=batch_size,
+                                               batch_size=args.batch_size,
                                                shuffle=True)
 
     val_rds = RadarDataSet(args.validation_data_pickle, transform=transform_validation)
 
     validation_loader = torch.utils.data.DataLoader(dataset=val_rds,
-                                                    batch_size=batch_size,
+                                                    batch_size=args.batch_size,
                                                     shuffle=False)
-    fid = FrechetInceptionDistance(batch_size, validation_loader, working_device)
+    fid = FrechetInceptionDistance(args.batch_size, validation_loader, working_device)
     net_g, net_d, net_e = get_network(args.z_size, dim, h, w, args.vae_enable, working_device)
+    betas = (args.beta1, args.beta2)
+    optimizer_d = optim.Adam(net_d.parameters(), lr=args.lr_d, betas=betas, weight_decay=args.weight_decay)
+    optimizer_g = optim.Adam(net_g.parameters(), lr=args.lr_g, betas=betas)
+    if net_e is not None:
+        optimizer_g = optim.Adam(
+            [{'params': net_e.parameters(), 'lr': args.lr_e, 'betas': betas, 'weight_decay': args.weight_decay},
+             {'params': net_g.parameters(), 'lr': args.lr_g, 'betas': betas}])
 
-    optimizer_d = optim.Adam(net_d.parameters(), lr=args.lr_d, betas=betas, weight_decay=wd)
-    optimizer_g = optim.Adam(net_g.parameters(), lr=args.lr_g, betas=betas, weight_decay=wd)
-    optimizer_e = None
-    if args.vae_enable and net_e is not None:
-        optimizer_g = optim.Adam(net_e.parameters(), lr=args.lr_e, betas=betas, weight_decay=wd)
-
-    gan_cfg = gan.GANConfig(gan.GANType[args.loss_type], batch_size=batch_size, z_size=args.z_size,
-                            input_working_device=working_device, sn_enable=args.sn_enable, gp_lambda=args.gp_lambda)
-    gan_trainer = gan.GANTraining(gan_cfg, net_d, net_g, optimizer_d, optimizer_g, net_encoder=net_e,
-                                  input_optimizer_e=optimizer_e)
+    gan_cfg = gan.GANConfig(gan.GANType[args.loss_type], batch_size=args.batch_size, z_size=args.z_size,
+                            input_working_device=working_device, sn_enable=args.sn_enable, gp_lambda=args.gp_lambda,
+                            kl_loss_factor=args.kl_loss_factor)
+    gan_trainer = gan.GANTraining(gan_cfg, net_d, net_g, optimizer_d, optimizer_g, net_encoder=net_e)
 
     ra = ResultsAveraging()
     for i in range(args.n_epoch):
         for data in tqdm(train_loader):
             data = data.to(working_device)
-            data = data.float()
             batch_results_dict = {}
             for step in gan_trainer.get_steps():
                 loss_dict = gan_trainer.train_step(step, data=data)
@@ -143,7 +141,9 @@ if __name__ == '__main__':
         fid_score = fid.calculate_fid(generative_func)
         if ra.is_best(fid_score):
             print("New Best :) everyone loves to play with GANs")
-            gan_trainer.update_best()
+            net2save = gan_trainer.update_best()
+            torch.save(net2save.state_dict(), os.path.join(wandb.run.dir, "model_best.pt"))
+
             n_example = 4
             data, _ = generative_func(batch_size=n_example * n_example, is_best=True)
             data = data.detach().cpu().numpy().reshape(-1, h, w)
