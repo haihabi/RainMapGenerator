@@ -85,8 +85,7 @@ if __name__ == '__main__':
     torch.manual_seed(args.seed)
     working_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Current Working Device is set to:" + str(working_device))
-
-    transform_training = transforms.Compose([
+    transform_training_list = [
         transforms.ToTensor(),
         MaxNormalization(),
         transforms.ToPILImage(),
@@ -94,12 +93,18 @@ if __name__ == '__main__':
         transforms.RandomHorizontalFlip(),
         transforms.ToTensor(),
 
-    ])
+    ]
 
-    transform_validation = transforms.Compose([
+    transform_validation_list = [
         transforms.ToTensor(),
         MaxNormalization(),
-    ])
+    ]
+    conditional = True
+    if conditional:
+        pass
+
+    transform_training = transforms.Compose(transform_training_list)
+    transform_validation = transforms.Compose(transform_validation_list)
 
     train_rds = RadarDataSet(args.training_data_pickle, transform=transform_training)
     print(train_rds.data_shape)
