@@ -139,14 +139,14 @@ if __name__ == '__main__':
     for i in range(args.n_epoch):
         for data in tqdm(train_loader):
             if conditional:
-                data = data[0].to(working_device)
+                image = data[0].to(working_device)
                 label = data[1].to(working_device)
             else:
-                data = data.to(working_device)
+                image = data.to(working_device)
                 label = None
             batch_results_dict = {}
             for step in gan_trainer.get_steps():
-                loss_dict = gan_trainer.train_step(step, data=data, condition=label)
+                loss_dict = gan_trainer.train_step(step, data=image, condition=label)
                 batch_results_dict.update({step + k: v for k, v in loss_dict.items()})
             ra.update_results(batch_results_dict)
         result_dict = ra.results()
