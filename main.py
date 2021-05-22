@@ -158,7 +158,8 @@ if __name__ == '__main__':
             torch.save(net2save.state_dict(), os.path.join(wandb.run.dir, "model_best.pt"))
 
             n_example = 4
-            data, _ = generative_func(batch_size=n_example * n_example, is_best=True)
+            data, _ = generative_func(batch_size=n_example * n_example, is_best=True,
+                                      cond=label[0, :] if conditional else None)
             data = data.detach().cpu().numpy().reshape(-1, h, w)
             for j in range(n_example * n_example):
                 plt.subplot(n_example, n_example, j + 1)

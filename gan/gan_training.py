@@ -89,6 +89,8 @@ class GANTraining(BaseTrainer):
     def get_generator_func(self):
         def func(batch_size=None, is_best=False, cond=None):
             z = self.samples_noise(batch_size=batch_size)
+            if cond is not None:
+                cond = cond.reshape([1, -1]).repeat([batch_size, 1])
             if is_best:
                 if cond is None:
                     return self.net_g_best(z), z
