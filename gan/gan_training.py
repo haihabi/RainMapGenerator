@@ -168,7 +168,7 @@ class GANTraining(BaseTrainer):
         mse_loss = 0
         kl_loss = 0
         if self.has_encoder:
-            mu, log_var = self.net_encoder(real_data)
+            mu, log_var = self.net_encoder(real_data, condition)
             z_hat = self.reparameterization(mu, log_var)
             fake_vae, _ = self.run_generator(real_data, condition, noise_vector=z_hat)
             mse_loss = torch.pow(fake_vae - real_data, 2.0).mean()  # MSE Loss
