@@ -119,7 +119,7 @@ if __name__ == '__main__':
     validation_loader = torch.utils.data.DataLoader(dataset=val_rds,
                                                     batch_size=args.batch_size,
                                                     shuffle=False)
-    fid = FrechetInceptionDistance(args.batch_size, validation_loader, working_device)
+    fid = FrechetInceptionDistance(args.batch_size, validation_loader, working_device, conditional=conditional)
     net_g, net_d, net_e = get_network(args.z_size, dim, h, w, args.vae_enable, 2 if conditional else 0, working_device)
     betas = (args.beta1, args.beta2)
     optimizer_d = optim.Adam(net_d.parameters(), lr=args.lr_d, betas=betas, weight_decay=args.weight_decay)

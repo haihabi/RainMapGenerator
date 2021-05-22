@@ -7,7 +7,7 @@ from scipy import linalg
 
 
 class FrechetInceptionDistance(object):
-    def __init__(self, batch_size, ds_loader, input_working_device, z_dim=128, dim=64):
+    def __init__(self, batch_size, ds_loader, input_working_device, z_dim=128, dim=64, conditional=False):
         with torch.no_grad():
             self.model = InceptionV3(output_blocks=[InceptionV3.BLOCK_INDEX_BY_DIM[dim]]).to(input_working_device)
         self.batch_size = batch_size
@@ -15,6 +15,7 @@ class FrechetInceptionDistance(object):
         ref_pred = self.get_activations(ds_loader)
         self.ref_mu, self.ref_sigma = self.calculate_activation_statistics(ref_pred)
         self.working_device = input_working_device
+        self.conditional = conditional
         print("Finish Ref Loading")
 
     def _get_pred(self, image):
@@ -28,7 +29,12 @@ class FrechetInceptionDistance(object):
 
     def get_activations(self, ds_loader):
         pred_list = []
-        for image in tqdm(ds_loader):
+        for data in tqdm(ds_loader):
+            if self.conditional:
+                image = data[0]
+            else:
+                image = data
+
             image = image.float()
             image = image.repeat((1, 3, 1, 1)).cuda()
             pred_list.append(self._get_pred(image))
