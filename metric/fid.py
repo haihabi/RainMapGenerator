@@ -63,7 +63,7 @@ class FrechetInceptionDistance(object):
                 label = data[1]
             else:
                 label = None
-            y = generator(self.batch_size, label)
+            y = generator(self.batch_size, cond=label)
             if isinstance(y, tuple):
                 y = y[0]
             if y.shape[1] == 1:
