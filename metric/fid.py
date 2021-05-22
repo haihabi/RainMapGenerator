@@ -11,11 +11,12 @@ class FrechetInceptionDistance(object):
         with torch.no_grad():
             self.model = InceptionV3(output_blocks=[InceptionV3.BLOCK_INDEX_BY_DIM[dim]]).to(input_working_device)
         self.batch_size = batch_size
+        self.conditional = conditional
         self.ref_n_samples = len(ds_loader)
         ref_pred = self.get_activations(ds_loader)
         self.ref_mu, self.ref_sigma = self.calculate_activation_statistics(ref_pred)
         self.working_device = input_working_device
-        self.conditional = conditional
+
         print("Finish Ref Loading")
 
     def _get_pred(self, image):
