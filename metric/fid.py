@@ -12,6 +12,7 @@ class FrechetInceptionDistance(object):
             self.model = InceptionV3(output_blocks=[InceptionV3.BLOCK_INDEX_BY_DIM[dim]]).to(input_working_device)
         self.batch_size = batch_size
         self.conditional = conditional
+        self.ds_loader = ds_loader
         self.ref_n_samples = len(ds_loader)
         ref_pred = self.get_activations(ds_loader)
         self.ref_mu, self.ref_sigma = self.calculate_activation_statistics(ref_pred)
@@ -57,8 +58,12 @@ class FrechetInceptionDistance(object):
 
     def calculate_fid(self, generator):
         pred_list = []
-        for i in range(self.ref_n_samples):
-            y = generator(self.batch_size)
+        for data in tqdm(self.ds_loader):
+            if self.conditional:
+                label = data[1]
+            else:
+                label = None
+            y = generator(self.batch_size, label)
             if isinstance(y, tuple):
                 y = y[0]
             if y.shape[1] == 1:
