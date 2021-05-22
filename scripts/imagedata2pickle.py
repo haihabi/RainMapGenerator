@@ -24,11 +24,7 @@ def save_image2pickle(h, w, image_folder_path, n_samples, rain_t=0.1, rain_pixel
                 dn = rain_image_slice / np.max(rain_image_slice)
                 rain_pixels = np.sum(dn > rain_t) / (h * w)
                 if rain_pixels > rain_pixel_t:
-                    if labeled:
-                        image_anno = (rain_pixels)
-                        image_list.append((d, image_anno))
-                    else:
-                        image_list.append(d)
+                    image_list.append(d)
                 else:
                     filtered += 1
                     # print("a")

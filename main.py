@@ -103,7 +103,7 @@ if __name__ == '__main__':
     if conditional:
         kernel_size = 13
         transform_training_list.append(RadarImageAnnotation(h, w, kernel_size, 0.1))
-        transform_training_list.append(RadarImageAnnotation(h, w, kernel_size, 0.1))
+        transform_validation_list.append(RadarImageAnnotation(h, w, kernel_size, 0.1))
 
     transform_training = transforms.Compose(transform_training_list)
     transform_validation = transforms.Compose(transform_validation_list)
