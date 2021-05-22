@@ -3,7 +3,7 @@ from torch import nn
 
 
 class Generator(nn.Module):
-    def __init__(self, dim, h, w, out_features=16, z_size=128):
+    def __init__(self, dim, h, w, out_features=16, z_size=128, condition_vector_size=0):
         super(Generator, self).__init__()
         self.z_size = z_size
         self.h_in = int(h / 8)
@@ -12,11 +12,13 @@ class Generator(nn.Module):
         self.w_mid = int(w / 4)
         self.h = h
         self.w = w
+        self.condition_vector_size = condition_vector_size
+        self.conditional = self.condition_vector_size > 0
 
         self.out_features = out_features
         norm_class = nn.Identity
         preprocess = nn.Sequential(
-            nn.Linear(self.z_size, 4 * self.h_in * self.w_in * dim),
+            nn.Linear(self.z_size + self.condition_vector_size, 4 * self.h_in * self.w_in * dim),
             nn.ELU(),
         )
         block1 = nn.Sequential(
@@ -25,7 +27,7 @@ class Generator(nn.Module):
             nn.ReLU(True),
         )
         preprocess_1 = nn.Sequential(
-            nn.Linear(self.z_size, 2 * self.h_mid * self.w_mid * dim),
+            nn.Linear(self.z_size + self.condition_vector_size, 2 * self.h_mid * self.w_mid * dim),
             nn.ELU(),
         )
         block2 = nn.Sequential(
@@ -46,6 +48,8 @@ class Generator(nn.Module):
         self.output_nl = nn.Sigmoid()
 
     def forward(self, input_tensor, cond=None):
+        if self.conditional:
+            input_tensor = torch.cat([input_tensor, cond], dim=-1)
         output = self.preprocess(input_tensor)
         output = output.view(-1, 4 * self.dim, self.h_in, self.w_in)
         output = self.block1(output)  # x2 8,8
@@ -59,15 +63,17 @@ class Generator(nn.Module):
 
 
 class Discriminator(nn.Module):
-    def __init__(self, dim, h, w):
+    def __init__(self, dim, h, w, condition_vector_size=0):
         super(Discriminator, self).__init__()
         self.h = h
         self.w = w
         self.h_in = int(h / 8)
         self.w_in = int(w / 8)
         self.dim = dim
+        self.condition_vector_size = condition_vector_size
+        self.conditional = self.condition_vector_size > 0
         main = nn.Sequential(
-            nn.Conv2d(1, dim, 5, stride=2, padding=2),
+            nn.Conv2d(1 + self.condition_vector_size, dim, 5, stride=2, padding=2),
 
             nn.LeakyReLU(inplace=True),
             nn.Conv2d(dim, 2 * dim, 5, stride=2, padding=2),
@@ -84,6 +90,10 @@ class Discriminator(nn.Module):
 
     def forward(self, input, cond=None):
         input = input.view(-1, 1, self.h, self.w)
+        if self.conditional:
+            cond = cond.reshape([-1, self.condition_vector_size, 1, 1])
+            cond = cond.repeat([1, 1, self.h, self.w])
+            input = torch.cat([input, cond], dim=1)
         out = self.main(input)
         out = out.view(-1, 4 * self.h_in * self.w_in * self.dim)
         out = self.output(out)
@@ -91,7 +101,7 @@ class Discriminator(nn.Module):
 
 
 class Encoder(nn.Module):
-    def __init__(self, dim, z_size, h, w):
+    def __init__(self, dim, z_size, h, w, condition_vector_size=0):
         super(Encoder, self).__init__()
         self.h = h
         self.w = w
@@ -99,14 +109,16 @@ class Encoder(nn.Module):
         self.h_in = int(h / 8)
         self.w_in = int(w / 8)
         self.dim = dim
+        self.condition_vector_size = condition_vector_size
+        self.conditional = self.condition_vector_size > 0
         main = nn.Sequential(
-            nn.Conv2d(1, dim, 5, stride=2, padding=2),
+            nn.Conv2d(1 + self.condition_vector_size, dim, (5, 5), stride=(2, 2), padding=(2, 2)),
 
             nn.LeakyReLU(inplace=True),
-            nn.Conv2d(dim, 2 * dim, 5, stride=2, padding=2),
+            nn.Conv2d(dim, 2 * dim, (5, 5), stride=(2, 2), padding=(2, 2)),
 
             nn.LeakyReLU(inplace=True),
-            nn.Conv2d(2 * dim, 4 * dim, 5, stride=2, padding=2),
+            nn.Conv2d(2 * dim, 4 * dim, (5, 5), stride=(2, 2), padding=(2, 2)),
 
             nn.LeakyReLU(inplace=True),
 
@@ -118,6 +130,11 @@ class Encoder(nn.Module):
 
     def forward(self, input, cond=None):
         input = input.view(-1, 1, self.h, self.w)
+        if self.conditional:
+            cond = cond.reshape([-1, self.condition_vector_size, 1, 1])
+            cond = cond.repeat([1, 1, self.h, self.w])
+            input = torch.cat([input, cond], dim=1)
+
         out = self.main(input)
         out = out.view(-1, 4 * self.h_in * self.w_in * self.dim)
         out_mu = self.output_mu(out)

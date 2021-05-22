@@ -9,7 +9,7 @@ from tqdm import tqdm
 import gan
 from networks.factory import get_network
 from dataset.radar_static import RadarDataSet
-from dataset.preprocess import MaxNormalization
+from dataset.preprocess import MaxNormalization, RadarImageAnnotation
 from metric import ResultsAveraging, FrechetInceptionDistance
 from matplotlib import pyplot as plt
 
@@ -101,7 +101,9 @@ if __name__ == '__main__':
     ]
     conditional = True
     if conditional:
-        pass
+        kernel_size = 13
+        transform_training_list.append(RadarImageAnnotation(h, w, kernel_size, 0.1))
+        transform_training_list.append(RadarImageAnnotation(h, w, kernel_size, 0.1))
 
     transform_training = transforms.Compose(transform_training_list)
     transform_validation = transforms.Compose(transform_validation_list)
@@ -118,7 +120,7 @@ if __name__ == '__main__':
                                                     batch_size=args.batch_size,
                                                     shuffle=False)
     fid = FrechetInceptionDistance(args.batch_size, validation_loader, working_device)
-    net_g, net_d, net_e = get_network(args.z_size, dim, h, w, args.vae_enable, working_device)
+    net_g, net_d, net_e = get_network(args.z_size, dim, h, w, args.vae_enable, 2 if conditional else 0, working_device)
     betas = (args.beta1, args.beta2)
     optimizer_d = optim.Adam(net_d.parameters(), lr=args.lr_d, betas=betas, weight_decay=args.weight_decay)
     optimizer_g = optim.Adam(net_g.parameters(), lr=args.lr_g, betas=betas)
@@ -128,6 +130,7 @@ if __name__ == '__main__':
              {'params': net_g.parameters(), 'lr': args.lr_g, 'betas': betas}])
 
     gan_cfg = gan.GANConfig(gan.GANType[args.loss_type], batch_size=args.batch_size, z_size=args.z_size,
+                            conditional=conditional,
                             input_working_device=working_device, sn_enable=args.sn_enable, gp_lambda=args.gp_lambda,
                             kl_loss_factor=args.kl_loss_factor)
     gan_trainer = gan.GANTraining(gan_cfg, net_d, net_g, optimizer_d, optimizer_g, net_encoder=net_e)
@@ -135,10 +138,15 @@ if __name__ == '__main__':
     ra = ResultsAveraging()
     for i in range(args.n_epoch):
         for data in tqdm(train_loader):
-            data = data.to(working_device)
+            if conditional:
+                data = data[0].to(working_device)
+                label = data[1].to(working_device)
+            else:
+                data = data.to(working_device)
+                label = None
             batch_results_dict = {}
             for step in gan_trainer.get_steps():
-                loss_dict = gan_trainer.train_step(step, data=data)
+                loss_dict = gan_trainer.train_step(step, data=data, condition=label)
                 batch_results_dict.update({step + k: v for k, v in loss_dict.items()})
             ra.update_results(batch_results_dict)
         result_dict = ra.results()
