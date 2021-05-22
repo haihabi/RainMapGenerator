@@ -60,7 +60,7 @@ class FrechetInceptionDistance(object):
         pred_list = []
         for data in tqdm(self.ds_loader):
             if self.conditional:
-                label = data[1]
+                label = data[1].to(self.working_device)
             else:
                 label = None
             y = generator(self.batch_size, cond=label)
