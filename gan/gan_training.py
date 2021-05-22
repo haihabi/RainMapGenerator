@@ -70,7 +70,7 @@ class GANTraining(BaseTrainer):
 
         interpolates = interpolates.to(self.gan_config.working_device)
         interpolates = autograd.Variable(interpolates, requires_grad=True)
-        disc_interpolates = self.net_discriminator(interpolates, condition=condition)
+        disc_interpolates = self.net_discriminator(interpolates, condition)
 
         gradients = autograd.grad(outputs=disc_interpolates, inputs=interpolates,
                                   grad_outputs=torch.ones(disc_interpolates.size()).to(
