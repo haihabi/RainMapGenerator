@@ -63,14 +63,14 @@ class GANTraining(BaseTrainer):
         elif step == GENERATOR:
             return self.train_generator(kwargs['data'], condition=kwargs.get('condition'))
 
-    def calc_gradient_penalty(self, real_data, fake_data):
+    def calc_gradient_penalty(self, real_data, fake_data, condition):
         alpha = torch.rand(real_data.shape[0], 1, 1, 1).to(self.gan_config.working_device)
 
         interpolates = alpha * real_data + ((1 - alpha) * fake_data)
 
         interpolates = interpolates.to(self.gan_config.working_device)
         interpolates = autograd.Variable(interpolates, requires_grad=True)
-        disc_interpolates = self.net_discriminator(interpolates)
+        disc_interpolates = self.net_discriminator(interpolates, condition=condition)
 
         gradients = autograd.grad(outputs=disc_interpolates, inputs=interpolates,
                                   grad_outputs=torch.ones(disc_interpolates.size()).to(
@@ -137,7 +137,8 @@ class GANTraining(BaseTrainer):
         # Gradient Penalty
         ########################################################
         if self.gan_config.enable_gp() > 0:
-            gradient_penalty = self.gan_config.gp_lambda * self.calc_gradient_penalty(real_data.data, gen_data.data)
+            gradient_penalty = self.gan_config.gp_lambda * self.calc_gradient_penalty(real_data.data, gen_data.data,
+                                                                                      condition)
             gradient_penalty.backward()
         ########################################################
         # Gradient Clipping
