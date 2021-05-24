@@ -119,6 +119,14 @@ if __name__ == '__main__':
     validation_loader = torch.utils.data.DataLoader(dataset=val_rds,
                                                     batch_size=args.batch_size,
                                                     shuffle=False)
+    if conditional:
+        cond_list = [data[1] for data in train_loader]
+        cond_tensor = torch.cat(cond_list, dim=0)
+        cond_min = torch.min(cond_tensor, dim=0)
+        cond_max = torch.max(cond_tensor, dim=0)
+        print(cond_min)
+        print(cond_max)
+
     fid = FrechetInceptionDistance(args.batch_size, validation_loader, working_device, conditional=conditional)
     net_g, net_d, net_e = get_network(args.z_size, dim, h, w, args.vae_enable, 2 if conditional else 0, working_device)
     betas = (args.beta1, args.beta2)
