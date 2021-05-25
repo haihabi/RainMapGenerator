@@ -158,8 +158,11 @@ class GANTraining(BaseTrainer):
         for p in self.net_discriminator.parameters():
             p.requires_grad = False  # to avoid computation
         self.net_g.zero_grad()
+        random_condition = None
+        if self.gan_config.conditional:
+            random_condition = self.gan_config.condition_generator(real_data.shape[0])
 
-        gen_data, z = self.run_generator(real_data, condition)
+        gen_data, z = self.run_generator(real_data, random_condition)
         d_fake = self.run_discriminator(gen_data, condition)
 
         d_real = self.run_discriminator(real_data, condition) if self.loss.dual_generator else None

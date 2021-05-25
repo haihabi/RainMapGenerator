@@ -72,19 +72,33 @@ def arg_parsing():
     return args
 
 
-if __name__ == '__main__':
+def mount_drive():
     if google_flag:
         print("Mounting Drive Folder...")
         drive.mount('/content/gdrive/')
 
-    args = arg_parsing()
-    print(f"Starting Run of {PROJECT}")
+
+def init_wandb(args):
     if found_wandb:
         wandb.init(project=PROJECT)
         wandb.config.update(args)  # adds all of the arguments as config variables
-    torch.manual_seed(args.seed)
+
+
+def get_working_device():
     working_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Current Working Device is set to:" + str(working_device))
+    return working_device
+
+
+if __name__ == '__main__':
+    print(f"Starting Run of {PROJECT}")
+    mount_drive()
+    args = arg_parsing()
+    init_wandb(args)
+
+    torch.manual_seed(args.seed)
+    working_device = get_working_device()
+
     transform_training_list = [
         transforms.ToTensor(),
         MaxNormalization(),
@@ -109,7 +123,6 @@ if __name__ == '__main__':
     transform_validation = transforms.Compose(transform_validation_list)
 
     train_rds = RadarDataSet(args.training_data_pickle, transform=transform_training)
-    print(train_rds.data_shape)
     train_loader = torch.utils.data.DataLoader(dataset=train_rds,
                                                batch_size=args.batch_size,
                                                shuffle=True)
@@ -119,16 +132,22 @@ if __name__ == '__main__':
     validation_loader = torch.utils.data.DataLoader(dataset=val_rds,
                                                     batch_size=args.batch_size,
                                                     shuffle=False)
+
     if conditional:
         cond_list = [data[1] for data in train_loader]
         cond_tensor = torch.cat(cond_list, dim=0)
-        cond_min = torch.min(cond_tensor, dim=0)
-        cond_max = torch.max(cond_tensor, dim=0)
-        print(cond_min)
-        print(cond_max)
+        cond_min = torch.min(cond_tensor, dim=0).reshape([1, -1])
+        cond_max = torch.max(cond_tensor, dim=0).reshape([1, -1])
+
+
+        def condition_generator():
+            cond = cond_min + (cond_max - cond_min) * torch.rand([args.batch_size, 2])
+            cond[:, 1] = torch.round(cond[:, 1])
+            return cond.to(working_device)
 
     fid = FrechetInceptionDistance(args.batch_size, validation_loader, working_device, conditional=conditional)
     net_g, net_d, net_e = get_network(args.z_size, dim, h, w, args.vae_enable, 2 if conditional else 0, working_device)
+
     betas = (args.beta1, args.beta2)
     optimizer_d = optim.Adam(net_d.parameters(), lr=args.lr_d, betas=betas, weight_decay=args.weight_decay)
     optimizer_g = optim.Adam(net_g.parameters(), lr=args.lr_g, betas=betas)
@@ -140,7 +159,7 @@ if __name__ == '__main__':
     gan_cfg = gan.GANConfig(gan.GANType[args.loss_type], batch_size=args.batch_size, z_size=args.z_size,
                             conditional=conditional,
                             input_working_device=working_device, sn_enable=args.sn_enable, gp_lambda=args.gp_lambda,
-                            kl_loss_factor=args.kl_loss_factor)
+                            kl_loss_factor=args.kl_loss_factor, condition_generator=condition_generator)
     gan_trainer = gan.GANTraining(gan_cfg, net_d, net_g, optimizer_d, optimizer_g, net_encoder=net_e)
 
     ra = ResultsAveraging()
