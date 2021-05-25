@@ -136,8 +136,8 @@ if __name__ == '__main__':
     if conditional:
         cond_list = [data[1] for data in train_loader]
         cond_tensor = torch.cat(cond_list, dim=0)
-        cond_min = torch.min(cond_tensor, dim=0).reshape([1, -1])
-        cond_max = torch.max(cond_tensor, dim=0).reshape([1, -1])
+        cond_min = torch.min(cond_tensor, dim=0)[0].reshape([1, -1])
+        cond_max = torch.max(cond_tensor, dim=0)[0].reshape([1, -1])
 
 
         def condition_generator():

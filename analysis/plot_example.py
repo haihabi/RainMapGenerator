@@ -12,9 +12,6 @@ generator.load_state_dict(torch.load(model_file, map_location='cpu'))
 generator.eval()
 
 
-# rain_rate
-
-
 def sample_rain_field(rain_rate, n_peaks):
     with torch.no_grad():
         cond = torch.Tensor([rain_rate, n_peaks]).reshape([1, -1])
