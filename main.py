@@ -140,8 +140,8 @@ if __name__ == '__main__':
         cond_max = torch.max(cond_tensor, dim=0)[0].reshape([1, -1])
 
 
-        def condition_generator():
-            cond = cond_min + (cond_max - cond_min) * torch.rand([args.batch_size, 2])
+        def condition_generator(batch_size):
+            cond = cond_min + (cond_max - cond_min) * torch.rand([batch_size, 2])
             cond[:, 1] = torch.round(cond[:, 1])
             return cond.to(working_device)
 
