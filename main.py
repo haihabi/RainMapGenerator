@@ -7,11 +7,13 @@ from torch import optim
 from tqdm import tqdm
 
 import gan
+import json
 from networks.factory import get_network
 from dataset.radar_static import RadarDataSet
 from dataset.preprocess import MaxNormalization, RadarImageAnnotation
 from metric import ResultsAveraging, FrechetInceptionDistance
 from matplotlib import pyplot as plt
+from datetime import datetime
 
 wandb_flag = util.find_spec("wandb")
 found_wandb = wandb_flag is not None
@@ -43,6 +45,9 @@ def arg_parsing():
                         default='/content/data/rain_data.pickle' if google_flag else '/data/datasets/rain_data.pickle')
     parser.add_argument('--validation_data_pickle', type=str,
                         default='/content/data/rain_data_val.pickle' if google_flag else '/data/datasets/rain_data.pickle')
+
+    parser.add_argument('--wandb_disable', action='store_false')
+    parser.add_argument('--log_folder', type=str, default='./')
     ################################
     # Optimizer
     ################################
@@ -84,6 +89,21 @@ def init_wandb(args):
         wandb.config.update(args)  # adds all of the arguments as config variables
 
 
+def datetime_folder_name():
+    now = datetime.now()  # current date and time
+    date_time = now.strftime("%d_%m_%Y_%H_%M_%S")
+    return date_time
+
+
+def init_folder(args):
+    log_folder = os.path.join(args.log_folder, 'logs', datetime_folder_name())
+    os.makedirs(log_folder, exist_ok=True)
+    args_dict = vars(args)
+    with open(os.path.join(log_folder, 'config.json'), 'w') as outfile:
+        json.dump(args_dict, outfile)
+    return log_folder
+
+
 def get_working_device():
     working_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print("Current Working Device is set to:" + str(working_device))
@@ -94,7 +114,11 @@ if __name__ == '__main__':
     print(f"Starting Run of {PROJECT}")
     mount_drive()
     args = arg_parsing()
-    init_wandb(args)
+    wandb_run_time_flag = args.wandb_enable and found_wandb
+    if wandb_run_time_flag:
+        init_wandb(args)
+    else:
+        log_folder = init_folder(args)
 
     torch.manual_seed(args.seed)
     working_device = get_working_device()
@@ -179,6 +203,7 @@ if __name__ == '__main__':
         result_dict = ra.results()
         generative_func = gan_trainer.get_generator_func()
         fid_score = fid.calculate_fid(generative_func)
+        ra.end_epoch(extra_results={'FID': fid_score})
         if ra.is_best(fid_score):
             print("New Best :) everyone loves to play with GANs")
             net2save = gan_trainer.update_best()
@@ -192,6 +217,11 @@ if __name__ == '__main__':
                 plt.subplot(n_example, n_example, j + 1)
                 plt.imshow(data[j, :, :])
 
-        result_dict.update({'FID': fid_score, 'examples': plt})
-        wandb.log(result_dict)
+        if wandb_run_time_flag:
+            result_dict.update({'FID': fid_score, 'examples': plt})
+
+            wandb.log(result_dict)
+        else:
+            pass
+
         print(f"Finished Epoch:{i} with FID:{fid_score}")
