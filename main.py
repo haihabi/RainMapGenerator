@@ -114,7 +114,7 @@ if __name__ == '__main__':
     print(f"Starting Run of {PROJECT}")
     mount_drive()
     args = arg_parsing()
-    wandb_run_time_flag = (not args.wandb_disable) and found_wandb
+    wandb_run_time_flag = args.wandb_disable and found_wandb
     if wandb_run_time_flag:
         init_wandb(args)
     else:
