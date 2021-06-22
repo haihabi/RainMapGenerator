@@ -14,6 +14,7 @@ from dataset.preprocess import MaxNormalization, RadarImageAnnotation
 from metric import ResultsAveraging, FrechetInceptionDistance
 from matplotlib import pyplot as plt
 from datetime import datetime
+import time
 
 wandb_flag = util.find_spec("wandb")
 found_wandb = wandb_flag is not None
@@ -201,7 +202,9 @@ if __name__ == '__main__':
                 label = None
             batch_results_dict = {}
             for step in gan_trainer.get_steps():
+                s = time.time()
                 loss_dict = gan_trainer.train_step(step, data=image, condition=label)
+                print(time.time() - s)
                 batch_results_dict.update({step + k: v for k, v in loss_dict.items()})
             ra.update_results(batch_results_dict)
         result_dict = ra.results()
