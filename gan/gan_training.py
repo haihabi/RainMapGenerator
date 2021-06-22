@@ -51,6 +51,9 @@ class GANTraining(BaseTrainer):
         if gan_config.is_spectral_norm():
             self.net_discriminator.apply(add_sn)
             print("Applying Spectral-Norm to discriminator")
+        if gan_config.is_spectral_norm_generator():
+            self.net_g.apply(add_sn)
+            print("Applying Spectral-Norm to Generator")
         self.optimizer_d = input_optimizer_d
         self.optimizer_g = input_optimizer_g
         self.loss = gan_config.get_loss()

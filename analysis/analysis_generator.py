@@ -1,5 +1,5 @@
 import torch
-from networks.dcgan import Generator
+from networks.dcgan import DCGANGenerator
 from matplotlib import pyplot as plt
 
 h = 32
@@ -7,7 +7,7 @@ w = 32
 dim = 128
 z_size = 128
 
-g = Generator(dim, h, w)
+g = DCGANGenerator(dim, h, w)
 
 g.load_state_dict(torch.load("C:\\model_best.pt", map_location='cpu'))
 z_0 = torch.randn([1, z_size])

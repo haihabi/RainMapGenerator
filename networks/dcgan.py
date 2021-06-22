@@ -2,9 +2,9 @@ import torch
 from torch import nn
 
 
-class Generator(nn.Module):
+class ModifiedDCGANGenerator(nn.Module):
     def __init__(self, dim, h, w, out_features=16, z_size=128, condition_vector_size=0):
-        super(Generator, self).__init__()
+        super(ModifiedDCGANGenerator, self).__init__()
         self.z_size = z_size
         self.h_in = int(h / 8)
         self.w_in = int(w / 8)
@@ -26,15 +26,18 @@ class Generator(nn.Module):
             norm_class(),
             nn.ReLU(True),
         )
+
         preprocess_1 = nn.Sequential(
             nn.Linear(self.z_size + self.condition_vector_size, 2 * self.h_mid * self.w_mid * dim),
             nn.ELU(),
         )
+        self.preprocess_1 = preprocess_1
         block2 = nn.Sequential(
-            nn.ConvTranspose2d(4 * dim, dim, 2, stride=2, padding=0),
+            nn.ConvTranspose2d(2 * dim + 2 * dim, dim, 2, stride=2, padding=0),
             norm_class(),
             nn.ReLU(True),
         )
+
         deconv_out = nn.ConvTranspose2d(dim, self.out_features, 2, stride=2, padding=0)
 
         self.output_intensity = nn.Conv2d(self.out_features, 1, kernel_size=1, stride=1, padding=0)
@@ -43,7 +46,7 @@ class Generator(nn.Module):
         self.block2 = block2
         self.deconv_out = deconv_out
         self.preprocess = preprocess
-        self.preprocess_1 = preprocess_1
+
         self.eps = 1e-6
         self.output_nl = nn.Sigmoid()
 
@@ -55,6 +58,61 @@ class Generator(nn.Module):
         output = self.block1(output)  # x2 8,8
         output_z = self.preprocess_1(input_tensor).view(-1, 2 * self.dim, self.h_mid, self.w_mid)
         output = torch.cat([output, output_z], dim=1)
+        output = self.block2(output)  # x2 16,16
+        output = self.deconv_out(output)
+        output_intensity = self.output_nl(self.output_intensity(output))
+        output = output_intensity
+        return output.view(-1, 1, self.h, self.w)
+
+
+class DCGANGenerator(nn.Module):
+    def __init__(self, dim, h, w, out_features=16, z_size=128, condition_vector_size=0):
+        super(DCGANGenerator, self).__init__()
+        self.z_size = z_size
+        self.h_in = int(h / 8)
+        self.w_in = int(w / 8)
+        self.h_mid = int(h / 4)
+        self.w_mid = int(w / 4)
+        self.h = h
+        self.w = w
+        self.condition_vector_size = condition_vector_size
+        self.conditional = self.condition_vector_size > 0
+
+        self.out_features = out_features
+        norm_class = nn.Identity
+        preprocess = nn.Sequential(
+            nn.Linear(self.z_size + self.condition_vector_size, 4 * self.h_in * self.w_in * dim),
+            nn.ELU(),
+        )
+        block1 = nn.Sequential(
+            nn.ConvTranspose2d(4 * dim, 2 * dim, 2, stride=2),
+            norm_class(),
+            nn.ReLU(True),
+        )
+        block2 = nn.Sequential(
+            nn.ConvTranspose2d(2 * dim, dim, 2, stride=2, padding=0),
+            norm_class(),
+            nn.ReLU(True),
+        )
+        deconv_out = nn.ConvTranspose2d(dim, self.out_features, 2, stride=2, padding=0)
+
+        self.output_intensity = nn.Conv2d(self.out_features, 1, kernel_size=1, stride=1, padding=0)
+        self.dim = dim
+        self.block1 = block1
+        self.block2 = block2
+        self.deconv_out = deconv_out
+        self.preprocess = preprocess
+        self.eps = 1e-6
+        self.output_nl = nn.Sigmoid()
+
+    def forward(self, input_tensor, cond=None):
+        if self.conditional:
+            input_tensor = torch.cat([input_tensor, cond], dim=-1)
+        output = self.preprocess(input_tensor)
+        output = output.view(-1, 4 * self.dim, self.h_in, self.w_in)
+        output = self.block1(output)  # x2 8,8
+        # output_z = self.preprocess_1(input_tensor).view(-1, 2 * self.dim, self.h_mid, self.w_mid)
+        # output = torch.cat([output, output_z], dim=1)
         output = self.block2(output)  # x2 16,16
         output = self.deconv_out(output)
         output_intensity = self.output_nl(self.output_intensity(output))

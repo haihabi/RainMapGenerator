@@ -1,11 +1,11 @@
 import torch
-from networks.dcgan import Generator
+from networks.dcgan import DCGANGenerator
 from matplotlib import pyplot as plt
 
 h = 32
 w = 32
 dim = 128
-generator = Generator(dim, h, w, condition_vector_size=2)
+generator = DCGANGenerator(dim, h, w, condition_vector_size=2)
 
 model_file = r'C:\study\TAU Lab\RainMapGenerator\model_zoo\dcgan_model.pt'
 generator.load_state_dict(torch.load(model_file, map_location='cpu'))

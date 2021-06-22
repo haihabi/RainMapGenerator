@@ -8,7 +8,7 @@ from tqdm import tqdm
 
 import gan
 import json
-from networks.factory import get_network
+from networks.factory import get_network, GeneratorType
 from dataset.radar_static import RadarDataSet
 from dataset.preprocess import MaxNormalization, RadarImageAnnotation
 from metric import ResultsAveraging, FrechetInceptionDistance
@@ -59,9 +59,11 @@ def arg_parsing():
     ################################
     # GAN
     ################################
+    parser.add_argument('--generator_type', type=str, default='DCGAN', choices=[e.name for e in GeneratorType])
     parser.add_argument('--loss_type', type=str, default='WGAN', choices=['WGAN', 'RaSGAN'])
     parser.add_argument('--z_size', type=int, default=128)
     parser.add_argument('--sn_enable', action='store_true')
+    parser.add_argument('--sn_enable_generator', action='store_true')
     parser.add_argument('--gp_lambda', type=float, default=10)
     ################################
     # VAE
@@ -170,7 +172,8 @@ if __name__ == '__main__':
             return cond.to(working_device)
 
     fid = FrechetInceptionDistance(args.batch_size, validation_loader, working_device, conditional=conditional)
-    net_g, net_d, net_e = get_network(args.z_size, dim, h, w, args.vae_enable, 2 if conditional else 0, working_device)
+    net_g, net_d, net_e = get_network(GeneratorType[args.generator_type], args.z_size, dim, h, w, args.vae_enable,
+                                      2 if conditional else 0, working_device)
 
     betas = (args.beta1, args.beta2)
     optimizer_d = optim.Adam(net_d.parameters(), lr=args.lr_d, betas=betas, weight_decay=args.weight_decay)
@@ -183,7 +186,8 @@ if __name__ == '__main__':
     gan_cfg = gan.GANConfig(gan.GANType[args.loss_type], batch_size=args.batch_size, z_size=args.z_size,
                             conditional=conditional,
                             input_working_device=working_device, sn_enable=args.sn_enable, gp_lambda=args.gp_lambda,
-                            kl_loss_factor=args.kl_loss_factor, condition_generator=condition_generator)
+                            kl_loss_factor=args.kl_loss_factor, condition_generator=condition_generator,
+                            sn_enable_generator=args.sn_enable_generator)
     gan_trainer = gan.GANTraining(gan_cfg, net_d, net_g, optimizer_d, optimizer_g, net_encoder=net_e)
 
     ra = ResultsAveraging()
