@@ -6,7 +6,7 @@ from networks.dcgan_adain import AdaINDCGANGenerator
 class GeneratorType(Enum):
     DCGAN = 0
     MDCGAN = 1
-    AdaINDCGAN = 1
+    AdaINDCGAN = 2
 
 
 def get_network(network_type, z_size, dim, h, w, vae_enable, condition_vector_size, input_working_device):

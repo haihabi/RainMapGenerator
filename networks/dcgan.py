@@ -85,16 +85,16 @@ class DCGANGenerator(nn.Module):
             nn.ELU(),
         )
         block1 = nn.Sequential(
-            nn.ConvTranspose2d(4 * dim, 2 * dim, 2, stride=2),
+            nn.ConvTranspose2d(4 * dim, 2 * dim, (4, 4), stride=2, padding=1),
             norm_class(),
             nn.ReLU(True),
         )
         block2 = nn.Sequential(
-            nn.ConvTranspose2d(2 * dim, dim, 2, stride=2, padding=0),
+            nn.ConvTranspose2d(2 * dim, dim, (4, 4), stride=2, padding=1),
             norm_class(),
             nn.ReLU(True),
         )
-        deconv_out = nn.ConvTranspose2d(dim, self.out_features, 2, stride=2, padding=0)
+        deconv_out = nn.ConvTranspose2d(dim, self.out_features, (4, 4), stride=2, padding=1)
 
         self.output_intensity = nn.Conv2d(self.out_features, 1, kernel_size=1, stride=1, padding=0)
         self.dim = dim

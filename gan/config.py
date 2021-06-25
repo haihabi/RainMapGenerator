@@ -29,8 +29,7 @@ def key_exists(key, **kwargs):
 class GANConfig(object):
     def __init__(self, gan_type: GANType, batch_size: int, z_size: int, input_working_device, conditional: bool = False,
                  sn_enable=False, gp_lambda=0, kl_loss_factor=1, n_critic=1, clipping_value=0.1,
-                 sn_enable_generator=False,
-                 condition_generator=None):
+                 sn_enable_generator=False):
         self.gan_type = gan_type
         self.working_device = input_working_device
         self.batch_size = batch_size
@@ -43,7 +42,6 @@ class GANConfig(object):
         self.n_critic = n_critic
         self.kl_loss_factor = kl_loss_factor
         self.clipping_value = clipping_value
-        self.condition_generator = condition_generator
 
     def is_clipping(self) -> bool:
         return self.clipping_value is not None

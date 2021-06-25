@@ -40,12 +40,12 @@ def arg_parsing():
     parser = argparse.ArgumentParser(description='Rain Map Generative Training')
     parser.add_argument('--seed', type=int, default=0)
     parser.add_argument('--n_epoch', type=int, default=50)
-    parser.add_argument('--batch_size', type=int, default=32)
+    parser.add_argument('--batch_size', type=int, default=128)
 
     parser.add_argument('--training_data_pickle', type=str,
                         default='/content/data/rain_data.pickle' if google_flag else '/data/datasets/rain_data.pickle')
     parser.add_argument('--validation_data_pickle', type=str,
-                        default='/content/data/rain_data_val.pickle' if google_flag else '/data/datasets/rain_data.pickle')
+                        default='/content/data/rain_data_val.pickle' if google_flag else '/data/datasets/rain_data_val.pickle')
 
     parser.add_argument('--wandb_disable', action='store_false')
     parser.add_argument('--log_folder', type=str, default='./')
@@ -53,30 +53,29 @@ def arg_parsing():
     # Optimizer
     ################################
     parser.add_argument('--lr_g', type=float, default=1e-4)
-    parser.add_argument('--lr_d', type=float, default=1e-4)
+    parser.add_argument('--lr_d', type=float, default=2e-4)
     parser.add_argument('--weight_decay', type=float, default=1e-4)
-    parser.add_argument('--beta1', type=float, default=0.5)
-    parser.add_argument('--beta2', type=float, default=0.999)
+    parser.add_argument('--beta1', type=float, default=0.0)
+    parser.add_argument('--beta2', type=float, default=0.9)
     ################################
     # GAN
     ################################
     parser.add_argument('--generator_type', type=str, default='DCGAN', choices=[e.name for e in GeneratorType])
-    parser.add_argument('--loss_type', type=str, default='WGAN', choices=['WGAN', 'RaSGAN'])
+    parser.add_argument('--loss_type', type=str, default='RaSGAN', choices=['WGAN', 'RaSGAN'])
     parser.add_argument('--z_size', type=int, default=128)
     parser.add_argument('--sn_enable', action='store_true')
     parser.add_argument('--sn_enable_generator', action='store_true')
-    parser.add_argument('--gp_lambda', type=float, default=10)
+    parser.add_argument('--gp_lambda', type=float, default=-1)
     ################################
     # VAE
     ################################
     parser.add_argument('--vae_enable', action='store_true')
     parser.add_argument('--lr_e', type=float, default=1e-4)
-    parser.add_argument('--kl_loss_factor', type=float, default=3)
+    parser.add_argument('--kl_loss_factor', type=float, default=1)
     ################################
     # Network Config
     ################################
     args = parser.parse_args()
-
     return args
 
 
@@ -159,23 +158,12 @@ if __name__ == '__main__':
     validation_loader = torch.utils.data.DataLoader(dataset=val_rds,
                                                     batch_size=args.batch_size,
                                                     shuffle=False)
-
-    if conditional:
-        cond_list = [data[1] for data in train_loader]
-        cond_tensor = torch.cat(cond_list, dim=0)
-        cond_min = torch.min(cond_tensor, dim=0)[0].reshape([1, -1])
-        cond_max = torch.max(cond_tensor, dim=0)[0].reshape([1, -1])
-
-
-        def condition_generator(batch_size):
-            cond = cond_min + (cond_max - cond_min) * torch.rand([batch_size, 2])
-            cond[:, 1] = torch.round(cond[:, 1])
-            return cond.to(working_device)
-
+    print("Init Frechet Inception Distance")
     fid = FrechetInceptionDistance(args.batch_size, validation_loader, working_device, conditional=conditional)
+    print("Init Networks")
     net_g, net_d, net_e = get_network(GeneratorType[args.generator_type], args.z_size, dim, h, w, args.vae_enable,
                                       2 if conditional else 0, working_device)
-
+    print("Optimizers")
     betas = (args.beta1, args.beta2)
     optimizer_d = optim.Adam(net_d.parameters(), lr=args.lr_d, betas=betas, weight_decay=args.weight_decay)
     optimizer_g = optim.Adam(net_g.parameters(), lr=args.lr_g, betas=betas)
@@ -183,15 +171,16 @@ if __name__ == '__main__':
         optimizer_g = optim.Adam(
             [{'params': net_e.parameters(), 'lr': args.lr_e, 'betas': betas, 'weight_decay': args.weight_decay},
              {'params': net_g.parameters(), 'lr': args.lr_g, 'betas': betas}])
-
+    print("Init GAN Configuration")
     gan_cfg = gan.GANConfig(gan.GANType[args.loss_type], batch_size=args.batch_size, z_size=args.z_size,
                             conditional=conditional,
                             input_working_device=working_device, sn_enable=args.sn_enable, gp_lambda=args.gp_lambda,
-                            kl_loss_factor=args.kl_loss_factor, condition_generator=condition_generator,
+                            kl_loss_factor=args.kl_loss_factor,
                             sn_enable_generator=args.sn_enable_generator)
     gan_trainer = gan.GANTraining(gan_cfg, net_d, net_g, optimizer_d, optimizer_g, net_encoder=net_e)
 
     ra = ResultsAveraging()
+    print("Starting Training Loopr")
     for i in range(args.n_epoch):
         for data in tqdm(train_loader):
             if conditional:
@@ -202,9 +191,8 @@ if __name__ == '__main__':
                 label = None
             batch_results_dict = {}
             for step in gan_trainer.get_steps():
-                s = time.time()
                 loss_dict = gan_trainer.train_step(step, data=image, condition=label)
-                print(time.time() - s)
+
                 batch_results_dict.update({step + k: v for k, v in loss_dict.items()})
             ra.update_results(batch_results_dict)
         result_dict = ra.results()
