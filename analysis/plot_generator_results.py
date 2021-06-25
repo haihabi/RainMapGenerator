@@ -10,6 +10,7 @@ import torch
 def argument():
     argp = argparse.ArgumentParser()
     argp.add_argument('--run_name', type=str)
+    argp.add_argument('--wandb_user', type=str)
     return argp.parse_args()
 
 
@@ -31,9 +32,9 @@ def load_model(cfg, weigths_path):
     return net_g, sample_rain_field
 
 
-def download_network_and_config(run_name):
+def download_network_and_config(user_name, run_name):
     api = wandb.Api()
-    runs = api.runs(f"hvh/{PROJECT}")
+    runs = api.runs(f"{user_name}/{PROJECT}")
     run = None
     for r in runs:
         run = r if r.name == run_name else run
@@ -46,13 +47,13 @@ def download_network_and_config(run_name):
 
 if __name__ == '__main__':
     cfg = argument()
-    cfg, net_g, sample_rain_field = download_network_and_config(cfg.run_name)
+    cfg, net_g, sample_rain_field = download_network_and_config(cfg.wandb_user, cfg.run_name)
 
     ###########################
     # Model Collapse Plot
     ###########################
     k = 4
-    sample = sample_rain_field(0.1, 5, batch_size=k ** 2)
+    sample = sample_rain_field(0.3, 5, batch_size=k ** 2)
     for i in range(k):
         for j in range(k):
             plt.subplot(k, k, i + 1 + 4 * j)
