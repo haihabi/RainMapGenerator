@@ -5,16 +5,15 @@ from importlib import util
 from torchvision import transforms
 from torch import optim
 from tqdm import tqdm
+from matplotlib import pyplot as plt
 
-import gan
-import json
 from networks.factory import get_network, GeneratorType
 from dataset.radar_static import RadarDataSet
 from dataset.preprocess import MaxNormalization, RadarImageAnnotation
 from metric import ResultsAveraging, FrechetInceptionDistance
-from matplotlib import pyplot as plt
-from datetime import datetime
-import time
+import gan
+
+from common import get_working_device, PROJECT, init_folder, datetime_folder_name, M_CONDIONS
 
 wandb_flag = util.find_spec("wandb")
 found_wandb = wandb_flag is not None
@@ -30,11 +29,6 @@ if google_flag:
     except:
         google_flag = False
 
-PROJECT = 'RainMapGenerator'
-h = 32
-w = 32
-dim = 128
-
 
 def arg_parsing():
     parser = argparse.ArgumentParser(description='Rain Map Generative Training')
@@ -49,6 +43,13 @@ def arg_parsing():
 
     parser.add_argument('--wandb_disable', action='store_false')
     parser.add_argument('--log_folder', type=str, default='./')
+    ################################
+    # Network Config
+    ################################
+    parser.add_argument('--h', type=int, default=32)
+    parser.add_argument('--w', type=int, default=32)
+    parser.add_argument('--dim', type=int, default=128)
+    parser.add_argument('--disable_conditional', action='store_true')
     ################################
     # Optimizer
     ################################
@@ -91,27 +92,6 @@ def init_wandb(args):
         wandb.config.update(args)  # adds all of the arguments as config variables
 
 
-def datetime_folder_name():
-    now = datetime.now()  # current date and time
-    date_time = now.strftime("%d_%m_%Y_%H_%M_%S")
-    return date_time
-
-
-def init_folder(args):
-    log_folder = os.path.join(args.log_folder, 'logs', datetime_folder_name())
-    os.makedirs(log_folder, exist_ok=True)
-    args_dict = vars(args)
-    with open(os.path.join(log_folder, 'config.json'), 'w') as outfile:
-        json.dump(args_dict, outfile)
-    return log_folder
-
-
-def get_working_device():
-    working_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    print("Current Working Device is set to:" + str(working_device))
-    return working_device
-
-
 if __name__ == '__main__':
     print(f"Starting Run of {PROJECT}")
     mount_drive()
@@ -139,11 +119,11 @@ if __name__ == '__main__':
         transforms.ToTensor(),
         MaxNormalization(),
     ]
-    conditional = True
+    conditional = not args.disable_conditional
     if conditional:
         kernel_size = 13
-        transform_training_list.append(RadarImageAnnotation(h, w, kernel_size, 0.1))
-        transform_validation_list.append(RadarImageAnnotation(h, w, kernel_size, 0.1))
+        transform_training_list.append(RadarImageAnnotation(args.h, args.w, kernel_size, 0.1))
+        transform_validation_list.append(RadarImageAnnotation(args.h, args.w, kernel_size, 0.1))
 
     transform_training = transforms.Compose(transform_training_list)
     transform_validation = transforms.Compose(transform_validation_list)
@@ -161,8 +141,9 @@ if __name__ == '__main__':
     print("Init Frechet Inception Distance")
     fid = FrechetInceptionDistance(args.batch_size, validation_loader, working_device, conditional=conditional)
     print("Init Networks")
-    net_g, net_d, net_e = get_network(GeneratorType[args.generator_type], args.z_size, dim, h, w, args.vae_enable,
-                                      2 if conditional else 0, working_device)
+    net_g, net_d, net_e = get_network(GeneratorType[args.generator_type], args.z_size, args.dim, args.h, args.w,
+                                      args.vae_enable,
+                                      M_CONDIONS if conditional else 0, working_device)
     print("Optimizers")
     betas = (args.beta1, args.beta2)
     optimizer_d = optim.Adam(net_d.parameters(), lr=args.lr_d, betas=betas, weight_decay=args.weight_decay)
@@ -207,7 +188,7 @@ if __name__ == '__main__':
             n_example = 4
             data, _ = generative_func(batch_size=n_example * n_example, is_best=True,
                                       cond=label[0, :] if conditional else None)
-            data = data.detach().cpu().numpy().reshape(-1, h, w)
+            data = data.detach().cpu().numpy().reshape(-1, args.h, args.w)
             for j in range(n_example * n_example):
                 plt.subplot(n_example, n_example, j + 1)
                 plt.imshow(data[j, :, :])
