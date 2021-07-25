@@ -4,3 +4,4 @@ tqdm
 numpy
 torch
 pandas
+huggingface_hub

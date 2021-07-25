@@ -74,6 +74,12 @@ def arg_parsing():
     parser.add_argument('--lr_e', type=float, default=1e-4)
     parser.add_argument('--kl_loss_factor', type=float, default=1)
     ################################
+    # Bla
+    ################################
+    parser.add_argument('--enable_blalba', action='store_true')
+    parser.add_argument('--n_iter_blabla', type=int, default=560)
+    parser.add_argument('--bla_scale', type=float, default=0.5)
+    ################################
     # Network Config
     ################################
     args = parser.parse_args()
@@ -199,5 +205,6 @@ if __name__ == '__main__':
             wandb.log(result_dict)
         else:
             pass
-
+        if args.enable_blabla:
+            blabla(args.n_iter_blabla, args.bla_scale)
         print(f"Finished Epoch:{i} with FID:{fid_score}")
