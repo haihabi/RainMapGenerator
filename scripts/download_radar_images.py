@@ -6,6 +6,9 @@ import os
 from tqdm import tqdm
 import argparse
 
+RAW_DATA = "raw_radar_images"
+SHMI_RADAR_URL = 'https://opendata-download-radar.smhi.se/api/version/latest/area/sweden/product/comp/'
+
 
 def get_file_name(file_url):
     return str.split(file_url, '/')[-1]
@@ -28,13 +31,18 @@ def download_and_save_file(save_path: str, file_url: str):
 
 
 def radar_day_url_builder(day: int, month: int, year: int) -> str:
-    return 'https://opendata-download-radar.smhi.se/api/version/latest/area/sweden/product/comp/' + str(
-        year) + '/' + str(month) + '/' + str(day)
+    """
+    Built day data url of SHMI.
+
+    """
+    return SHMI_RADAR_URL + str(year) + '/' + str(month) + '/' + str(day)
 
 
-def download_radar_data(save_path: str, start_date: pd.datetime, end_date: pd.datetime, format='tif') -> list:
+def download_radar_data(save_path: str, start_date: pd.Timestamp, end_date: pd.Timestamp, format='tif') -> list:
     file_list = []
     date_list = pd.date_range(start_date, end_date).tolist()
+    raw_data_path = os.path.join(save_path, RAW_DATA)
+    os.makedirs(raw_data_path, exist_ok=True)
     for date in date_list:
         print(date)
         url = radar_day_url_builder(date.day, date.month, date.year)
@@ -45,9 +53,9 @@ def download_radar_data(save_path: str, start_date: pd.datetime, end_date: pd.da
             if len(df) == 1:  # if filter data length is one (only support tif format)
                 file_url = df[0].get('link')
                 file_name = get_file_name(file_url)
-                file = os.path.join(save_path, file_name)
+                file = os.path.join(raw_data_path, file_name)
                 if not os.path.isfile(file):
-                    download_and_save_file(save_path, file_url)
+                    download_and_save_file(raw_data_path, file_url)
                 print("Downloaded file:" + file)
                 file_list.append(file)
             elif len(df) == 0:
@@ -68,14 +76,14 @@ if __name__ == '__main__':
                         help='an integer for the accumulator')
     parser.add_argument('--end_month', type=int, default=12,
                         help='an integer for the accumulator')
-    parser.add_argument('--start_year', type=int,
+    parser.add_argument('--start_year', type=int, default=2016,
                         help='an integer for the accumulator')
-    parser.add_argument('--end_year', type=int,
+    parser.add_argument('--end_year', type=int, default=2016,
                         help='an integer for the accumulator')
-    parser.add_argument('--save_folder', type=str,
+    parser.add_argument('--save_folder', type=str, default="",
                         help='an integer for the accumulator')
 
     args = parser.parse_args()
-    start_time = pd.datetime(year=args.start_year, month=args.start_month, day=args.start_day)
-    end_time = pd.datetime(year=args.end_year, month=args.end_month, day=args.end_day)
+    start_time = pd.Timestamp(year=args.start_year, month=args.start_month, day=args.start_day)
+    end_time = pd.Timestamp(year=args.end_year, month=args.end_month, day=args.end_day)
     download_radar_data(args.save_folder, start_time, end_time)

@@ -35,19 +35,19 @@ Here is the results output
 ### Build Dataset Pickle
 The RainGAN training require a dataset of  Rain Image. In this project our dataset is base on SHMI radar map, to construction of such a dataset requires two steps.
  
-1.Download Radar Map: This is 
+1.Download Radar Map: This is code download raw 
 ```
 python scripts/download_radar_images.py 
 ```
 Generate Dataset Pickle
 ```
-python scripts/download_radar_images.py 
+python scripts/imagedata2pickle.py 
 ```
 
 ### Training
 
 ```
-python scripts/download_radar_images.py 
+python main.py 
 ```
 
 
@@ -55,4 +55,18 @@ python scripts/download_radar_images.py
 
 ## Reference
 
+If you find this work usefully, please cite:
+
+Habi, Hai Victor, and Hagit Messer. "RainGAN: A Conditional Rain Fields Generator." 2021 IEEE International Conference on Microwaves, Antennas, Communications and Electronic Systems (COMCAS). IEEE, 2021.
+
+```
+@inproceedings{habi2021raingan,
+  title={RainGAN: A Conditional Rain Fields Generator},
+  author={Habi, Hai Victor and Messer, Hagit},
+  booktitle={2021 IEEE International Conference on Microwaves, Antennas, Communications and Electronic Systems (COMCAS)},
+  pages={529--532},
+  year={2021},
+  organization={IEEE}
+}
+```
 
