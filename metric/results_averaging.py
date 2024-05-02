@@ -33,6 +33,3 @@ class ResultsAveraging(object):
             if self.batch_acc.get(k) is None:
                 self.batch_acc.update({k: []})
             self.batch_acc.get(k).append(v)
-
-    def end_epoch(self, extra_results):
-        pass
